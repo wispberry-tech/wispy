@@ -348,3 +348,81 @@ func (l *Lexer) lookupIdent(ident string) TokenType {
 	}
 	return IDENT
 }
+
+// GetPosition returns the current lexer position.
+func (l *Lexer) GetPosition() int {
+	return l.position
+}
+
+// SetPosition sets the lexer position and updates internal state.
+func (l *Lexer) SetPosition(pos int) {
+	if pos < 0 {
+		pos = 0
+	}
+	if pos > len(l.input) {
+		pos = len(l.input)
+	}
+	l.position = pos
+	l.readPosition = pos + 1
+	if pos < len(l.input) {
+		l.ch = l.input[pos]
+	} else {
+		l.ch = 0
+	}
+}
+
+// GetInput returns the lexer's input string.
+func (l *Lexer) GetInput() string {
+	return l.input
+}
+
+// CaptureRawText captures raw text from the current position until {% endraw %} is found.
+func (l *Lexer) CaptureRawText() string {
+	startPos := l.position
+	if startPos >= len(l.input) {
+		return ""
+	}
+
+	// Scan forward to find {% endraw %}
+	for i := startPos; i < len(l.input)-7; i++ {
+		if l.input[i] != '{' || l.input[i+1] != '%' {
+			continue
+		}
+
+		// Found a {% block - check if it's {% endraw %}
+		j := i + 2
+		// Skip whitespace
+		for j < len(l.input) && (l.input[j] == ' ' || l.input[j] == '\t' || l.input[j] == '\n' || l.input[j] == '\r') {
+			j++
+		}
+
+		// Check for "endraw" (6 characters)
+		if j+6 <= len(l.input) && l.input[j:j+6] == "endraw" {
+			// Found {% endraw %}, capture everything before it
+			rawContent := l.input[startPos:i]
+
+			// Advance lexer position past {% endraw %}
+			j += 6
+			// Skip whitespace
+			for j < len(l.input) && (l.input[j] == ' ' || l.input[j] == '\t' || l.input[j] == '\n' || l.input[j] == '\r') {
+				j++
+			}
+			// Look for %}
+			if j+1 < len(l.input) && l.input[j] == '%' && l.input[j+1] == '}' {
+				j += 2
+			}
+
+			l.position = j
+			l.readPosition = j + 1
+			if j < len(l.input) {
+				l.ch = l.input[j]
+			} else {
+				l.ch = 0
+			}
+			return rawContent
+		}
+	}
+
+	// No {% endraw %} found, return everything until EOF
+	return l.input[startPos:]
+}

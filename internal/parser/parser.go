@@ -18,6 +18,7 @@ type Parser struct {
 	prefixParseFns map[lexer.TokenType]prefixParseFn
 	infixParseFns  map[lexer.TokenType]infixParseFn
 	currentScope   *scope.Scope
+	skipAdvance    bool // if true, skip nextToken() in ParseProgram
 }
 
 // NewParser creates a new parser with the given lexer.
@@ -55,10 +56,11 @@ func (p *Parser) ParseProgram() *ast.Program {
 		if stmt != nil {
 			program.Statements = append(program.Statements, stmt)
 		}
-		// Only advance if we're not already at EOF
-		if p.curTok.Type != lexer.EOF {
+		// Only advance if we're not already at EOF and skipAdvance is not set
+		if p.curTok.Type != lexer.EOF && !p.skipAdvance {
 			p.nextToken()
 		}
+		p.skipAdvance = false
 	}
 
 	return program
@@ -1399,31 +1401,62 @@ func (p *Parser) parseWispBlockStatement() ast.Statement {
 }
 
 // parseWispRawStatement parses a raw block: {% raw %}
+// At entry: curTok is RAW, lexer position is after "raw" keyword
 func (p *Parser) parseWispRawStatement() ast.Statement {
 	stmt := &ast.RawStatement{Token: p.curTok}
+	input := p.l.GetInput()
 
-	// Expect %}
-	if !p.expectPeek(lexer.RBRACE_PCT) {
-		return nil
-	}
+	// The lexer position is after "raw" keyword
+	// We need to find the %} that closes {% raw %}
+	// Search backward from current position to find %}
+	searchStart := p.l.GetPosition()
+	rawTagEnd := searchStart
 
-	// Parse body statements until {% endraw %} or {% end %}
-	body, closingType := p.parseBodyStatements()
-
-	// Capture raw content from body (text content is captured literally)
-	var rawContent string
-	for _, s := range body.Statements {
-		if tc, ok := s.(*ast.TextContent); ok {
-			rawContent += tc.Value
+	// Search backward for %} to find end of {% raw %} tag
+	for i := searchStart; i >= 1; i-- {
+		if input[i-1] == '%' && input[i] == '}' {
+			rawTagEnd = i + 1
+			break
 		}
 	}
-	stmt.Content = rawContent
 
-	// Consume the closing tag
-	if closingType == lexer.ENDRAW || closingType == lexer.END {
-		p.consumeEndTag()
+	// Now search for {% endraw %} from rawTagEnd
+	for i := rawTagEnd; i < len(input)-7; i++ {
+		if input[i] != '{' || input[i+1] != '%' {
+			continue
+		}
+		j := i + 2
+		for j < len(input) && (input[j] == ' ' || input[j] == '\t' || input[j] == '\n' || input[j] == '\r') {
+			j++
+		}
+		if j+6 <= len(input) && input[j:j+6] == "endraw" {
+			stmt.Content = input[rawTagEnd:i]
+
+			// Calculate position after {% endraw %}
+			j += 6
+			for j < len(input) && (input[j] == ' ' || input[j] == '\t' || input[j] == '\n' || input[j] == '\r') {
+				j++
+			}
+			if j+1 < len(input) && input[j] == '%' && input[j+1] == '}' {
+				j += 2
+			}
+
+			// Sync lexer to position after {% endraw %}
+			p.l.SetPosition(j)
+
+			// Fetch tokens from the new position
+			p.curTok = p.l.NextToken()
+			p.peekTok = p.l.NextToken()
+
+			// Tell ParseProgram to skip the next advance
+			p.skipAdvance = true
+
+			return stmt
+		}
 	}
 
+	// No {% endraw %} found - set EOF to stop parsing
+	p.curTok = lexer.NewToken(lexer.EOF, "", 0, 0)
 	return stmt
 }
 

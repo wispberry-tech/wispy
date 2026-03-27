@@ -578,3 +578,57 @@ func TestMaxIterations(t *testing.T) {
 		t.Error("Expected iteration limit error")
 	}
 }
+
+func TestEvaluateRawWithContentAfter(t *testing.T) {
+	s := scope.NewScope()
+	defer s.Release()
+
+	e := NewEvaluator(s)
+
+	l := lexer.NewLexer(`{% raw %}{% if .x %}test{% end %}{% endraw %}AFTER`)
+	p := parser.NewParser(l)
+	program := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		t.Fatalf("Parser errors: %v", p.Errors())
+	}
+
+	output, err := e.Evaluate(program)
+	if err != nil {
+		t.Errorf("Evaluate failed: %v", err)
+	}
+	expected := "{% if .x %}test{% end %}AFTER"
+	if output != expected {
+		t.Errorf("Expected %q, got %q", expected, output)
+	}
+}
+
+func TestEvaluateExtendsWithRawBlock(t *testing.T) {
+	s := scope.NewScope()
+	defer s.Release()
+
+	e := NewEvaluator(s)
+	e.SetTemplateFn(func(name string) (string, error) {
+		if name == "layout" {
+			return `<html>{% block body %}{% end %}</html>`, nil
+		}
+		return "", fmt.Errorf("template not found: %s", name)
+	})
+
+	l := lexer.NewLexer(`{% extends "layout" %}{% block body %}<pre><code>{% raw %}{% if .x %}test{% end %}{% endraw %}</code></pre>{% end %}`)
+	p := parser.NewParser(l)
+	program := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		t.Fatalf("Parser errors: %v", p.Errors())
+	}
+
+	output, err := e.Evaluate(program)
+	if err != nil {
+		t.Errorf("Evaluate failed: %v", err)
+	}
+	expected := `<html><pre><code>{% if .x %}test{% end %}</code></pre></html>`
+	if output != expected {
+		t.Errorf("Expected %q, got %q", expected, output)
+	}
+}
