@@ -5,7 +5,7 @@
 {% block body %}
 <h1>Json Filter</h1>
 
-<p>Serializes a value to its JSON representation.</p>
+<p>Converts a value to a string representation.</p>
 
 <h2>Syntax</h2>
 <pre><code>{% raw %}
@@ -29,7 +29,7 @@
 <p><strong>Output:</strong> null</p>
 
 <h2>Notes</h2>
-<p>The output is marked as a safe string to prevent HTML-escaping of the JSON content (e.g. angle brackets in strings). Strings are output with Go's <code>%q</code> formatting (double-quoted with escape sequences). Boolean values are rendered as <code>true</code> or <code>false</code>.</p>
+<p>The output is marked as a safe string to prevent HTML-escaping of the output (e.g. angle brackets in strings). Strings are double-quoted using Go's <code>%q</code> formatting (with escape sequences). Boolean values are rendered as <code>true</code> or <code>false</code>. For maps and arrays, the output uses Go's <code>%v</code> format (e.g. <code>map[key:value]</code>), <strong>not</strong> valid JSON. If you need valid JSON output, use Go's <code>encoding/json</code> standard library instead of this filter.</p>
 
 <h2>See Also</h2>
 <ul>
