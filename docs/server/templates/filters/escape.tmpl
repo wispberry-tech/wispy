@@ -28,13 +28,13 @@
 <h2>Notes</h2>
 <ul>
   <li>HTML auto-escaping is on by default in Wisp, so most variables are already escaped at render time. The <code>escape</code> filter is useful when you need to explicitly escape a <code>SafeString</code> or when embedding a value inside an HTML attribute.</li>
-  <li>To avoid double-escaping content that may already contain entities, use <a href="/test/filters/escape_once">escape_once</a> instead.</li>
+  <li>To avoid double-escaping content that may already contain entities, use <a href="/docs/filters/escape_once">escape_once</a> instead.</li>
   <li>Never use <code>raw</code> on user-provided content — it bypasses all escaping and creates an XSS risk.</li>
 </ul>
 
 <h2>See Also</h2>
 <ul>
-  <li><a href="/test/filters/escape_once">escape_once</a></li>
-  <li><a href="/test/filters/raw">raw</a></li>
+  <li><a href="/docs/filters/escape_once">escape_once</a></li>
+  <li><a href="/docs/filters/raw">raw</a></li>
 </ul>
 {% end %}

@@ -107,7 +107,7 @@
 <p>If you allow users to choose which partial to include, always use <code>render</code> (not <code>include</code>). The isolated scope of <code>render</code> prevents the sub-template from reading or overwriting sensitive variables in the parent context.</p>
 
 <h3>Understand escape vs escape_once</h3>
-<p>Use <a href="/test/filters/escape_once">escape_once</a> when content may already contain HTML entities (e.g., from a database or external API). It avoids double-encoding <code>&amp;amp;</code> into <code>&amp;amp;amp;</code>. Use <a href="/test/filters/escape">escape</a> when you need unconditional escaping regardless of the current state of the string.</p>
+<p>Use <a href="/docs/filters/escape_once">escape_once</a> when content may already contain HTML entities (e.g., from a database or external API). It avoids double-encoding <code>&amp;amp;</code> into <code>&amp;amp;amp;</code>. Use <a href="/docs/filters/escape">escape</a> when you need unconditional escaping regardless of the current state of the string.</p>
 
 <h2>Template Organization</h2>
 <pre><code>templates/
