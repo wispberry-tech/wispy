@@ -1,0 +1,77 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Filters Reference{% end %}
+
+{% block body %}
+<h1>Filters Reference</h1>
+
+<p>Template-Wisp provides 40 built-in filters for transforming values in template expressions.</p>
+
+<h2>String</h2>
+<ul>
+  <li><a href="/docs/filters/capitalize">capitalize</a> — capitalize first letter</li>
+  <li><a href="/docs/filters/upcase">upcase</a> — convert to uppercase</li>
+  <li><a href="/docs/filters/downcase">downcase</a> — convert to lowercase</li>
+  <li><a href="/docs/filters/strip">strip</a> — remove leading/trailing whitespace</li>
+  <li><a href="/docs/filters/lstrip">lstrip</a> — remove leading whitespace</li>
+  <li><a href="/docs/filters/rstrip">rstrip</a> — remove trailing whitespace</li>
+  <li><a href="/docs/filters/truncate">truncate</a> — truncate to N characters</li>
+  <li><a href="/docs/filters/replace">replace</a> — replace all occurrences of a substring</li>
+  <li><a href="/docs/filters/remove">remove</a> — remove all occurrences of a substring</li>
+  <li><a href="/docs/filters/append">append</a> — append a string</li>
+  <li><a href="/docs/filters/prepend">prepend</a> — prepend a string</li>
+  <li><a href="/docs/filters/split">split</a> — split by delimiter into array</li>
+  <li><a href="/docs/filters/join">join</a> — join array with delimiter</li>
+  <li><a href="/docs/filters/escape">escape</a> — HTML-escape a string</li>
+  <li><a href="/docs/filters/escape_once">escape_once</a> — HTML-escape without double-escaping</li>
+</ul>
+
+<h2>Array</h2>
+<ul>
+  <li><a href="/docs/filters/first">first</a> — first element</li>
+  <li><a href="/docs/filters/last">last</a> — last element</li>
+  <li><a href="/docs/filters/size">size</a> — count of elements</li>
+  <li><a href="/docs/filters/reverse">reverse</a> — reverse order</li>
+  <li><a href="/docs/filters/sort">sort</a> — sort alphabetically</li>
+  <li><a href="/docs/filters/uniq">uniq</a> — remove duplicates</li>
+  <li><a href="/docs/filters/map_field">map_field</a> — extract a field from each object</li>
+</ul>
+
+<h2>Numeric</h2>
+<ul>
+  <li><a href="/docs/filters/plus">plus</a> — add</li>
+  <li><a href="/docs/filters/minus">minus</a> — subtract</li>
+  <li><a href="/docs/filters/times">times</a> — multiply</li>
+  <li><a href="/docs/filters/divided_by">divided_by</a> — divide</li>
+  <li><a href="/docs/filters/modulo">modulo</a> — remainder</li>
+  <li><a href="/docs/filters/abs">abs</a> — absolute value</li>
+  <li><a href="/docs/filters/ceil">ceil</a> — round up</li>
+  <li><a href="/docs/filters/floor">floor</a> — round down</li>
+  <li><a href="/docs/filters/round">round</a> — round to N decimal places</li>
+</ul>
+
+<h2>Math</h2>
+<ul>
+  <li><a href="/docs/filters/min">min</a> — smaller of two numbers</li>
+  <li><a href="/docs/filters/max">max</a> — larger of two numbers</li>
+</ul>
+
+<h2>General</h2>
+<ul>
+  <li><a href="/docs/filters/default">default</a> — fallback value if nil/empty</li>
+  <li><a href="/docs/filters/json">json</a> — serialize to JSON</li>
+  <li><a href="/docs/filters/raw">raw</a> — mark as safe HTML, bypass escaping</li>
+</ul>
+
+<h2>Date</h2>
+<ul>
+  <li><a href="/docs/filters/date">date</a> — format using Go reference time layout</li>
+  <li><a href="/docs/filters/date_format">date_format</a> — format with Liquid-style directives</li>
+</ul>
+
+<h2>URL</h2>
+<ul>
+  <li><a href="/docs/filters/url_encode">url_encode</a> — URL-encode a string</li>
+  <li><a href="/docs/filters/url_decode">url_decode</a> — URL-decode a string</li>
+</ul>
+{% end %}

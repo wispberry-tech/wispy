@@ -1,0 +1,47 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Tags Reference{% end %}
+
+{% block body %}
+<h1>Tags Reference</h1>
+
+<p>Template-Wisp provides 24 built-in tags for controlling flow, managing variables, and composing templates.</p>
+
+<h2>Control Flow</h2>
+<ul>
+  <li><a href="/docs/tags/if">if</a> — conditional branching</li>
+  <li><a href="/docs/tags/unless">unless</a> — inverted conditional</li>
+  <li><a href="/docs/tags/case">case</a> — multi-branch switch</li>
+  <li><a href="/docs/tags/for">for</a> — iterate over a collection</li>
+  <li><a href="/docs/tags/range">range</a> — iterate over a numeric range</li>
+  <li><a href="/docs/tags/while">while</a> — condition-based loop</li>
+  <li><a href="/docs/tags/break">break</a> — exit a loop early</li>
+  <li><a href="/docs/tags/continue">continue</a> — skip to next iteration</li>
+</ul>
+
+<h2>Variables</h2>
+<ul>
+  <li><a href="/docs/tags/assign">assign</a> — set a variable</li>
+  <li><a href="/docs/tags/let">let</a> — scoped variable</li>
+  <li><a href="/docs/tags/capture">capture</a> — capture rendered output to a variable</li>
+  <li><a href="/docs/tags/with">with</a> — execute a block with a specific context object</li>
+  <li><a href="/docs/tags/increment">increment</a> — increment a counter</li>
+  <li><a href="/docs/tags/decrement">decrement</a> — decrement a counter</li>
+  <li><a href="/docs/tags/cycle">cycle</a> — cycle through values on each iteration</li>
+</ul>
+
+<h2>Composition</h2>
+<ul>
+  <li><a href="/docs/tags/include">include</a> — include another template sharing current scope</li>
+  <li><a href="/docs/tags/render">render</a> — include with isolated scope</li>
+  <li><a href="/docs/tags/component">component</a> — include with explicit props</li>
+  <li><a href="/docs/tags/extends">extends</a> — inherit from a layout template</li>
+  <li><a href="/docs/tags/block">block</a> — define a content slot</li>
+  <li><a href="/docs/tags/content">content</a> — output block content in a layout</li>
+</ul>
+
+<h2>Other</h2>
+<ul>
+  <li><a href="/docs/tags/comment">comment</a> — template comment, not rendered</li>
+</ul>
+{% end %}

@@ -75,7 +75,9 @@ func main() {
 
 	// Documentation routes
 	mux.HandleFunc("/docs/", handleDocs(docEngine))
+	mux.HandleFunc("/docs/tags", handleTagsIndex(docEngine))
 	mux.HandleFunc("/docs/tags/", handleTestTag(docEngine))
+	mux.HandleFunc("/docs/filters", handleFiltersIndex(docEngine))
 	mux.HandleFunc("/docs/filters/", handleTestFilter(docEngine))
 
 	addr := ":" + port
@@ -275,6 +277,18 @@ func handleDocs(docEngine *engine.Engine) http.HandlerFunc {
 		}
 		name = "/" + name
 		renderDoc(w, r, docEngine, name)
+	}
+}
+
+func handleTagsIndex(docEngine *engine.Engine) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		renderDoc(w, r, docEngine, "/tags/index")
+	}
+}
+
+func handleFiltersIndex(docEngine *engine.Engine) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		renderDoc(w, r, docEngine, "/filters/index")
 	}
 }
 
