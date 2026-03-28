@@ -23,7 +23,7 @@ import (
 
 func main() {
     e := engine.NewWithStore(
-        store.NewFileSystemStoreWithExt("./templates", ".tmpl"),
+        store.NewFileSystemStore("./templates"),
     )
 
     r := chi.NewRouter()
