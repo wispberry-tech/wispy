@@ -1,0 +1,33 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}While Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>While Tag</h1>
+
+<p>Loops while a condition is true.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% while condition %}
+  Content
+{% end %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% assign i = 0 %}
+{% while i < 3 %}
+{{i}}
+{% assign i = i | plus: 1 %}
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Continues while condition is truthy</li>
+  <li>Use SetMaxIterations to prevent infinite loops</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/for">for tag</a></li>
+  <li><a href="/test/break">break tag</a></li>
+</ul>
+{% end %}

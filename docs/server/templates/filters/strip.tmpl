@@ -1,0 +1,23 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Strip Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Strip Filter</h1>
+
+<p>Removes leading and/or trailing whitespace.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% "  hello  " | strip %}</code></pre>
+
+<h2>Filters</h2>
+<ul>
+  <li><strong>strip</strong> - Remove whitespace from both ends</li>
+  <li><strong>lstrip</strong> - Remove whitespace from the left</li>
+  <li><strong>rstrip</strong> - Remove whitespace from the right</li>
+</ul>
+
+<h2>Examples</h2>
+<pre><code>{% "  hello  " | strip %}</code></pre>
+<p><strong>Output:</strong> hello</p>
+{% end %}

@@ -1,0 +1,79 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Chi Router Integration - Wisp Documentation{% end %}
+
+{% block body %}
+<h1>Chi Router Integration</h1>
+
+<p>Wisp integrates seamlessly with Chi, a lightweight Go router.</p>
+
+<h2>Installation</h2>
+<pre><code>go get github.com/go-chi/chi/v5
+go get template-wisp</code></pre>
+
+<h2>Basic Setup</h2>
+<pre><code>package main
+
+import (
+    "net/http"
+    "github.com/go-chi/chi/v5"
+    "template-wisp/pkg/engine"
+    "template-wisp/internal/store"
+)
+
+func main() {
+    e := engine.NewWithStore(
+        store.NewFileSystemStoreWithExt("./templates", ".tmpl"),
+    )
+
+    r := chi.NewRouter()
+    r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+        output, _ := e.RenderFile("index", map[string]interface{}{
+            "title": "Welcome",
+        })
+        w.Header().Set("Content-Type", "text/html")
+        w.Write([]byte(output))
+    })
+
+    http.ListenAndServe(":3000", r)
+}</code></pre>
+
+<h2>URL Parameters</h2>
+<pre><code>r.Get("/page/{slug}", func(w http.ResponseWriter, r *http.Request) {
+    slug := chi.URLParam(r, "slug")
+    output, _ := e.RenderFile("page", map[string]interface{}{
+        "slug": slug,
+    })
+    w.Write([]byte(output))
+})</code></pre>
+
+<h2>Query Parameters</h2>
+<pre><code>r.Get("/search", func(w http.ResponseWriter, r *http.Request) {
+    query := r.URL.Query().Get("q")
+    output, _ := e.RenderFile("search", map[string]interface{}{
+        "query": query,
+    })
+    w.Write([]byte(output))
+})</code></pre>
+
+<h2>Middleware</h2>
+<pre><code>import "github.com/go-chi/chi/v5/middleware"
+
+r.Use(middleware.Logger)
+r.Use(middleware.Recovery)
+r.Use(middleware.RequestID)</code></pre>
+
+<h2>Best Practices</h2>
+<ul>
+  <li>Reuse engine instance across handlers</li>
+  <li>Add common data via middleware</li>
+  <li>Register templates at startup</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="https://github.com/go-chi/chi">Chi GitHub</a></li>
+  <li><a href="/docs/getting-started">Getting Started</a></li>
+  <li><a href="/docs/engine">Engine Architecture</a></li>
+</ul>
+{% end %}

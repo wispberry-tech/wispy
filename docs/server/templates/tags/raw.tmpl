@@ -1,0 +1,36 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Raw Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Raw Tag</h1>
+
+<p>Outputs template syntax literally without processing.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+  Content to output literally
+{% end %}</code></pre>
+
+<h2>Description</h2>
+<p>Prevents the template engine from processing any content between raw and end.</p>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{% for .item in .items %}
+  {%.item%}
+{% end %}
+{% end %}</code></pre>
+<p><strong>Output:</strong> {% for .item in .items %}  {%.item%} {% end %}</p>
+
+<h2>Notes</h2>
+<ul>
+  <li>Raw content is not evaluated</li>
+  <li>Useful for documentation</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/comment">comment tag</a></li>
+</ul>
+{% end %}

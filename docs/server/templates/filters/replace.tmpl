@@ -1,0 +1,16 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Replace Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Replace Filter</h1>
+
+<p>Replaces occurrences of a substring.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% "string" | replace: "old", "new" %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% "Hello World" | replace: "World", "Universe" %}</code></pre>
+<p><strong>Output:</strong> Hello Universe</p>
+{% end %}

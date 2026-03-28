@@ -1,0 +1,45 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Block Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Block Tag</h1>
+
+<p>Defines a named section in a template that can be overridden by child templates.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% block block_name %}
+    Default content
+{% end %}</code></pre>
+
+<h2>Description</h2>
+<p>Creates a named section in a parent template that child templates can override.</p>
+
+<h2>Examples</h2>
+
+<h3>Basic Block</h3>
+<pre><code>{% block title %}My Site{% end %}
+{% block content %}
+  &lt;p&gt;Content here&lt;/p&gt;
+{% end %}</code></pre>
+
+<h3>Override in Child</h3>
+<pre><code>{% extends "parent" %}
+{% block title %}About{% end %}
+{% block content %}
+  &lt;p&gt;About page content&lt;/p&gt;
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Parent defines blocks with default content</li>
+  <li>Child overrides specific blocks</li>
+  <li>Unoverridden blocks use parent defaults</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/extends">extends tag</a></li>
+  <li><a href="/test/content">content tag</a></li>
+</ul>
+{% end %}

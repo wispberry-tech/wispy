@@ -1,0 +1,27 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Break Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Break Tag</h1>
+
+<p>Exits a loop early.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% break %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% for .item in .items %}
+{% if .item.stop %}
+  {% break %}
+{% end %}
+{%.item.name%}
+{% end %}</code></pre>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/for">for tag</a></li>
+  <li><a href="/test/while">while tag</a></li>
+  <li><a href="/test/continue">continue tag</a></li>
+</ul>
+{% end %}

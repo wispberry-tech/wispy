@@ -1,0 +1,49 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Engine Architecture - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Engine Architecture</h1>
+
+<p>The Wisp template engine is a high-performance templating system designed for security and speed.</p>
+
+<h2>Overview</h2>
+<ol>
+  <li><strong>Input</strong>: Template string + data map</li>
+  <li><strong>Cache</strong>: Check if template already parsed</li>
+  <li><strong>Lexer</strong>: Tokenize template into tokens</li>
+  <li><strong>Parser</strong>: Convert tokens to AST</li>
+  <li><strong>Scope</strong>: Create variable scope</li>
+  <li><strong>Evaluator</strong>: Execute AST with data</li>
+  <li><strong>Output</strong>: Rendered string</li>
+</ol>
+
+<h2>Rendering Pipeline</h2>
+
+<h3>Caching</h3>
+<p>Parsed ASTs are cached in memory:</p>
+<pre><code>e.RenderString(template, data)
+e.RenderString(template, differentData)</code></pre>
+
+<h3>Security</h3>
+<p>Auto-escaping is enabled by default:</p>
+<pre><code>e := engine.New()
+e.SetAutoEscape(false)</code></pre>
+
+<h3>Resource Limits</h3>
+<pre><code>e.SetMaxIterations(10000)</code></pre>
+
+<h2>Performance</h2>
+<ul>
+  <li>Template caching - avoid re-parsing</li>
+  <li>Scope pooling - reduce allocations</li>
+  <li>Thread-safe - use across goroutines</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/getting-started">Getting Started</a></li>
+  <li><a href="/docs/best-practices">Best Practices</a></li>
+  <li><a href="/docs/security">Security</a></li>
+</ul>
+{% end %}

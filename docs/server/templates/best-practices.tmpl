@@ -1,0 +1,49 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Best Practices - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Best Practices</h1>
+
+<p>Guidelines for writing secure, performant, and maintainable Wisp templates.</p>
+
+<h2>Security</h2>
+
+<h3>Auto-Escaping</h3>
+<p>HTML auto-escaping is enabled by default. Keep it ON for HTML output.</p>
+
+<h3>Use raw Filter Only for Trusted Content</h3>
+<pre><code>
+  {% .trusted_content %}
+  {% .user_input %}
+</code></pre>
+
+<h3>Resource Limits</h3>
+<pre><code>e.SetMaxIterations(10000)</code></pre>
+
+<h2>Performance</h2>
+
+<h3>Reuse Engine Instances</h3>
+<pre><code>var engine = engine.New()</code></pre>
+
+<h2>Template Organization</h2>
+<pre><code>
+  templates/
+  ├── layouts/
+  ├── partials/
+  └── pages/
+</code></pre>
+
+<h2>Common Patterns</h2>
+
+<h3>Default Values</h3>
+<pre><code>
+  {% .user.name }
+</code></pre>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/getting-started">Getting Started</a></li>
+  <li><a href="/docs/security">Security</a></li>
+</ul>
+{% end %}

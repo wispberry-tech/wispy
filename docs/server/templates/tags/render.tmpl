@@ -1,0 +1,33 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Render Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Render Tag</h1>
+
+<p>Includes another template with an isolated scope.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% render "path/to/template" %}
+{% render "path/to/template", key: "value" %}</code></pre>
+
+<h2>Description</h2>
+<p>Renders a template with an isolated scope. Does not inherit parent context.</p>
+
+<h2>Examples</h2>
+
+<h3>With Data</h3>
+<pre><code>{% render "test/components/card", title: "Hello" %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Isolated scope (no parent context)</li>
+  <li>Data passed explicitly</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/include">include tag</a></li>
+  <li><a href="/test/component">component tag</a></li>
+</ul>
+{% end %}

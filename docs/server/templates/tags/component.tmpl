@@ -1,0 +1,32 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Component Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Component Tag</h1>
+
+<p>Renders a reusable UI component with properties.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% component "path/to/component", prop: "value" %}</code></pre>
+
+<h2>Description</h2>
+<p>Renders a template file as a reusable component with props.</p>
+
+<h2>Examples</h2>
+
+<h3>Basic Component</h3>
+<pre><code>{% component "button", text: "Click Me", type: "primary" %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Designed for UI elements</li>
+  <li>Accepts props for customization</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/include">include tag</a></li>
+  <li><a href="/test/render">render tag</a></li>
+</ul>
+{% end %}

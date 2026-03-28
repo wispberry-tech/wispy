@@ -1,0 +1,55 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Security - Wisp Documentation{% end %}
+
+{% block body %}
+<h1>Security</h1>
+
+<p>Wisp is designed with security as a core principle.</p>
+
+<h2>Auto-Escaping</h2>
+<p>HTML auto-escaping is enabled by default to prevent XSS attacks.</p>
+
+<table>
+  <tr><th>Character</th><th>Escaped To</th></tr>
+  <tr><td>&lt;</td><td>&amp;lt;</td></tr>
+  <tr><td>&gt;</td><td>&amp;gt;</td></tr>
+  <tr><td>"</td><td>&amp;quot;</td></tr>
+  <tr><td>&amp;</td><td>&amp;amp;</td></tr>
+</table>
+
+<pre><code>e := engine.New()  // Auto-escape ON
+e.SetAutoEscape(false)  // For JSON, plain text</code></pre>
+
+<h2>SafeString</h2>
+<p>Mark content as trusted:</p>
+<pre><code>{%.trusted_html | raw %}</code></pre>
+
+<p><strong>Warning:</strong> Only use raw for content you control, never for user input.</p>
+
+<h2>Resource Limits</h2>
+<p>Prevent infinite loops:</p>
+<pre><code>e.SetMaxIterations(10000)</code></pre>
+
+<table>
+  <tr><th>Use Case</th><th>Recommended Limit</th></tr>
+  <tr><td>Untrusted templates</td><td>1,000 - 5,000</td></tr>
+  <tr><td>Trusted templates</td><td>10,000 - 100,000</td></tr>
+  <tr><td>Development</td><td>0 (unlimited)</td></tr>
+</table>
+
+<h2>Security Checklist</h2>
+<ul>
+  <li>Keep auto-escaping enabled for HTML</li>
+  <li>Use raw filter only for trusted content</li>
+  <li>Set SetMaxIterations in production</li>
+  <li>Validate user-submitted templates</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/getting-started">Getting Started</a></li>
+  <li><a href="/docs/best-practices">Best Practices</a></li>
+  <li><a href="/docs/engine">Engine Architecture</a></li>
+</ul>
+{% end %}

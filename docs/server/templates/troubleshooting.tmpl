@@ -1,0 +1,114 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Troubleshooting - Wisp Documentation{% end %}
+
+{% block body %}
+<h1>Troubleshooting</h1>
+
+<p>Common issues and solutions.</p>
+
+<h2>Common Errors</h2>
+
+<h3>"variable not found: X"</h3>
+<p>Variable X is not in the data map.</p>
+<pre><code>{# Check data map #}
+data := map[string]interface{}{
+    "name": "Alice",  {# This exists #}
+    {# "email" missing #}
+}
+
+{# Use default to debug #}
+{%.email | default "NOT_FOUND"}</code></pre>
+
+<h3>"template not found: X"</h3>
+<p>Template file does not exist or not registered.</p>
+<pre><code>{# Register template manually #}
+e.RegisterTemplate("header", "&lt;header&gt;Header&lt;/header&gt;")
+
+{# Or ensure file exists in template directory #}</code></pre>
+
+<h3>"parse errors"</h3>
+<p>Template syntax is invalid.</p>
+<pre><code>{# Common mistakes #}
+{% if .show %}     {# Missing {% end %} #}
+{%.name }}       {# Extra } #}
+
+{# Validate before rendering #}
+e.Validate(template)</code></pre>
+
+<h3>Output shows escaped HTML</h3>
+<p>Auto-escaping is on by default.</p>
+<pre><code>{# Use raw for trusted content #}
+{%.trusted_html | raw}
+
+{# Or disable auto-escaping for non-HTML #}
+e.SetAutoEscape(false)</code></pre>
+
+<h2>Rendering Issues</h2>
+
+<h3>Variables not accessible in include/render</h3>
+<pre><code>{# include: shares parent scope - works #}
+{% assign .name = "Alice" %}
+{% include "partials/greeting" %}
+
+{# render: isolated scope - parent vars not available #}
+{% assign .name = "Alice" %}
+{% render "widget" .data %}{# Cannot access .name #}</code></pre>
+
+<h3>Blocks not overriding</h3>
+<pre><code>{# Ensure extends is FIRST #}
+{% extends "layouts/base" %}
+
+{% block content %}
+    This should work
+{% end %}</code></pre>
+
+<h2>Debugging Tips</h2>
+
+<h3>Print Variables</h3>
+<pre><code>{# Use json filter to see data #}
+{%. | json %}
+{%.user | json }
+
+{# Use default to check #}
+{%.name | default "NOT_SET"}</code></pre>
+
+<h3>Validate Templates</h3>
+<pre><code>func validateTemplate(template string) error {
+    e := engine.New()
+    return e.Validate(template)
+}</code></pre>
+
+<h2>FAQ</h2>
+
+<h3>How do I pass data to included templates?</h3>
+<pre><code>{# Parent variables are accessible in include #}
+{% assign .title = "Home" %}
+{% include "partials/header" %}
+
+{# Or pass additional data #}
+{% include "partials/card" .card_data %}</code></pre>
+
+<h3>Why isn't my custom filter working?</h3>
+<pre><code>{# Register filter #}
+e.RegisterFilter("myfilter", func(input interface{}) string {
+    return strings.ToUpper(toString(input))
+})
+
+{# Use without parens #}
+{%.name | myfilter}</code></pre>
+
+<h3>How do I render JSON?</h3>
+<pre><code>{# Disable auto-escaping for JSON #}
+e.SetAutoEscape(false)
+
+{# Use json filter #}
+{%.data | json}</code></pre>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/getting-started">Getting Started</a></li>
+  <li><a href="/docs/engine">Engine Architecture</a></li>
+  <li><a href="/docs/best-practices">Best Practices</a></li>
+</ul>
+{% end %}

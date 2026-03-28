@@ -1,0 +1,28 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Cycle Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Cycle Tag</h1>
+
+<p>Cycles through a list of values.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% cycle "value1", "value2", "value3" %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% for .item in .items %}
+&lt;li class="{% cycle "odd", "even" %}"&gt;{%.item%}&lt;/li&gt;
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Cycles through values on each call</li>
+  <li>Useful for alternating classes</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/for">for tag</a></li>
+</ul>
+{% end %}

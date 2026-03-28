@@ -1,0 +1,26 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Continue Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Continue Tag</h1>
+
+<p>Skips to the next iteration of a loop.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% continue %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% for .item in .items %}
+{% if .item.skip %}
+  {% continue %}
+{% end %}
+{%.item.name%}
+{% end %}</code></pre>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/for">for tag</a></li>
+  <li><a href="/test/break">break tag</a></li>
+</ul>
+{% end %}

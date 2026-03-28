@@ -1,0 +1,37 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Extends Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Extends Tag</h1>
+
+<p>Template inheritance through extends, block, and content tags.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% extends "path/to/layout" %}</code></pre>
+
+<h2>Description</h2>
+<p>Specifies which parent template to inherit from. Must be the first tag in the template.</p>
+
+<h2>Examples</h2>
+
+<h3>Basic Inheritance</h3>
+<pre><code>{% extends "test/layouts/base" %}
+{% block title %}My Page{% end %}
+{% block content %}
+  &lt;p&gt;My Content&lt;/p&gt;
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Must be the first tag in the template</li>
+  <li>Child templates can override blocks</li>
+  <li>Unoverridden blocks use parent defaults</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/block">block tag</a></li>
+  <li><a href="/test/content">content tag</a></li>
+</ul>
+{% end %}

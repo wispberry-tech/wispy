@@ -1,0 +1,29 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Increment Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Increment Tag</h1>
+
+<p>Increments a counter variable and returns its value.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% increment variable %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% increment counter %}
+{% increment counter %}
+{% increment counter %}</code></pre>
+<p><strong>Output:</strong> 0 1 2</p>
+
+<h2>Notes</h2>
+<ul>
+  <li>Global counter, persists across renders</li>
+  <li>Returns value before incrementing</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/decrement">decrement tag</a></li>
+</ul>
+{% end %}

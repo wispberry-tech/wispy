@@ -1,0 +1,23 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Let Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Let Tag</h1>
+
+<p>Creates a scoped variable that only exists within its block.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% let variable = value %}...{% endlet %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Variable only exists within let block</li>
+  <li>Does not affect outer scope</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/assign">assign tag</a></li>
+</ul>
+{% end %}

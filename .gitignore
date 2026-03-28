@@ -10,7 +10,9 @@
 
 # Compiled binaries in root directory
 server
+!server/
 wisp
+!wisp/
 
 # Test binary, built with `go test -c`
 *.test

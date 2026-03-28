@@ -1,0 +1,58 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Layout System - Wisp Documentation{% end %}
+
+{% block body %}
+<h1>Layout System</h1>
+
+<p>Template inheritance through extends, block, and content tags.</p>
+
+<h2>Extends</h2>
+<p>Child template inherits from parent layout:</p>
+<pre><code>{% extends "layouts/base" %}
+
+{% block content %}
+    Page content
+{% end %}</code></pre>
+
+<h2>Block</h2>
+<p>Parent defines replaceable sections:</p>
+<pre><code>{% block title %}Default Title{% end %}
+
+{% block content %}
+    Default content
+{% end %}</code></pre>
+
+<h2>Content</h2>
+<p>Alternative syntax for providing block content:</p>
+<pre><code>{% content title %}About Page{% endcontent %}
+{% content body %}Content here{% endcontent %}</code></pre>
+
+<h2>Nested Layouts</h2>
+<p>Create multi-level inheritance:</p>
+<pre><code>{# layouts/base.html #}
+{% block body %}{% end %}
+
+{# layouts/page.html #}
+{% extends "layouts/base" %}
+{% block body %}{% block content %}{% end %}{% end %}
+
+{# pages/about.html #}
+{% extends "layouts/page" %}
+{% block content %}About content{% end %}</code></pre>
+
+<h2>Best Practices</h2>
+<ul>
+  <li>Keep layouts simple with clear block names</li>
+  <li>Provide meaningful default content</li>
+  <li>Use consistent naming (title, content, head, etc.)</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/templates">Template Composition</a></li>
+  <li><a href="/test/extends">extends tag</a></li>
+  <li><a href="/test/block">block tag</a></li>
+  <li><a href="/test/content">content tag</a></li>
+</ul>
+{% end %}

@@ -1,0 +1,16 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Append Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Append Filter</h1>
+
+<p>Adds content to the end of a string.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% "string" | append: "suffix" %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% "Hello" | append: " World" %}</code></pre>
+<p><strong>Output:</strong> Hello World</p>
+{% end %}

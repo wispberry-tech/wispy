@@ -1,0 +1,43 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Unless Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Unless Tag</h1>
+
+<p>The unless tag is the logical inverse of the if tag. It renders content when a condition is false.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% unless .condition %}...{% end %}
+{% unless .condition %}...{% else %}...{% end %}</code></pre>
+
+<h2>Description</h2>
+<p>The unless tag evaluates a condition and renders content if the condition is falsy (false, nil, empty, or zero).</p>
+
+<h2>Examples</h2>
+
+<h3>Basic Unless</h3>
+<pre><code>{% unless .hidden %}Visible{% end %}</code></pre>
+<p><strong>Input:</strong> <code>{"hidden": false}</code></p>
+<p><strong>Output:</strong> Visible</p>
+
+<h3>Unless with Else</h3>
+<pre><code>{% unless .error %}
+  Success
+{% else %}
+  Error occurred
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Equivalent to "if not"</li>
+  <li>Supports else clause for alternative content</li>
+  <li>Common use: checking for nil/empty conditions</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/if">if tag</a></li>
+  <li><a href="/test/for">for tag</a></li>
+</ul>
+{% end %}

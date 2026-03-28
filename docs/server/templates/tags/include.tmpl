@@ -1,0 +1,44 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Include Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Include Tag</h1>
+
+<p>The include tag embeds the content of another template file into the current template.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% include "path/to/template" %}
+{% include "path/to/template", key: "value" %}</code></pre>
+
+<h2>Description</h2>
+<p>Loads and renders another template file, inserting its content at the point of inclusion. Included templates have access to the current context.</p>
+
+<h2>Examples</h2>
+
+<h3>Basic Include</h3>
+<pre><code>{% include "test/includes/simple" %}</code></pre>
+<p><strong>Output:</strong> Hello, Alice!</p>
+
+<h3>Include with Data</h3>
+<pre><code>{% include "test/includes/card", title: "Title", content: "Content" %}</code></pre>
+
+<h3>Include in Loop</h3>
+<pre><code>{% for .item in .items %}
+  {% include "test/includes/item", name: .item %}
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Path is relative to templates directory</li>
+  <li>Can pass additional data with key: value syntax</li>
+  <li>Inherits current context</li>
+  <li>Supports nested includes</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/extends">extends tag</a></li>
+  <li><a href="/test/render">render tag</a></li>
+</ul>
+{% end %}

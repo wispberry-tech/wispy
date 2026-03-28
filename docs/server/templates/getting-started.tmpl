@@ -1,0 +1,61 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Getting Started - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Getting Started with Wisp</h1>
+
+<p>Wisp is a secure, high-performance HTML templating engine for Go with a Liquid-inspired syntax.</p>
+
+<h2>Why Wisp?</h2>
+<ul>
+  <li>Security-first: HTML auto-escaping enabled by default</li>
+  <li>Familiar syntax: Liquid-inspired, easy to read and write</li>
+  <li>Performance: Template caching and scope pooling</li>
+  <li>Composable: Include, render, and component systems</li>
+</ul>
+
+<h2>Installation</h2>
+<pre><code>go get template-wisp</code></pre>
+
+<h2>Quick Start</h2>
+<pre><code>{% raw %}package main
+
+import (
+    "fmt"
+    "template-wisp/pkg/engine"
+)
+
+func main() {
+    e := engine.New()
+    template := "Hello, {%.name%}!"
+    data := map[string]interface{}{"name": "World"}
+    result, _ := e.RenderString(template, data)
+    fmt.Println(result)
+}{% endraw %}</code></pre>
+
+<h2>Basic Syntax</h2>
+<h3>Variables</h3>
+<p>Access with dot: <code>{% raw %}{%.name%}{% endraw %}</code></p>
+
+<h3>Filters</h3>
+<p>Transform: <code>{% raw %}{%.name | upcase %}{% endraw %}</code></p>
+
+<h3>Conditionals</h3>
+<p><code>{% raw %}{% if .show %}...{% end %}{% endraw %}</code></p>
+
+<h3>Loops</h3>
+<p><code>{% raw %}{% for .item in .items %}...{% end %}{% endraw %}</code></p>
+
+<h2>Template Composition</h2>
+<p>Three ways: include, render, component</p>
+
+<h2>Layout System</h2>
+<p>Use extends and block tags</p>
+
+<h2>Next Steps</h2>
+<ul>
+  <li><a href="/docs/engine">Engine Architecture</a></li>
+  <li><a href="/docs/best-practices">Best Practices</a></li>
+</ul>
+{% end %}

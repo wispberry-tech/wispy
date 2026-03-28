@@ -1,0 +1,61 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}If Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>If Tag</h1>
+
+<p>The if tag conditionally renders content based on a boolean value or expression.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{% if .condition %}...{% end %}
+{% if .condition %}...{% else %}...{% end %}
+{% if .condition %}...{% elsif .other %}...{% else %}...{% end %}
+{% endraw %}</code></pre>
+
+<h2>Description</h2>
+<p>The if tag evaluates a condition and renders content if the condition is truthy (not false, nil, or empty).</p>
+
+<h2>Examples</h2>
+
+<h3>Basic If - True</h3>
+<pre><code>{% raw %}
+{% if .active %}Active{% end %}
+{% endraw %}</code></pre>
+<p><strong>Input:</strong> <code>{"active": true}</code></p>
+<p><strong>Output:</strong> Active</p>
+
+<h3>Basic If - False</h3>
+<pre><code>{% raw %}
+{% if .active %}Active{% end %}
+{% endraw %}</code></pre>
+<p><strong>Input:</strong> <code>{"active": false}</code></p>
+<p><strong>Output:</strong> (empty)</p>
+
+<h3>If/Else</h3>
+<pre><code>{% raw %}
+{% if .status == "active" %}Active{% else %}Inactive{% end %}
+{% endraw %}</code></pre>
+<p><strong>Input:</strong> <code>{"status": "active"}</code></p>
+<p><strong>Output:</strong> Active</p>
+
+<h3>If/Elsif/Else</h3>
+<pre><code>{% raw %}
+{% if .user.role == "admin" %}Admin{% elsif .user.role == "user" %}User{% else %}Guest{% end %}
+{% endraw %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Truthy values: true, non-empty strings, non-zero numbers</li>
+  <li>Falsy values: false, nil, empty string, zero</li>
+  <li>Supports ==, !=, &gt;, &lt;, &gt;=, &lt;= comparisons</li>
+  <li>Supports and, or, not operators</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/unless">unless tag</a></li>
+  <li><a href="/test/case">case tag</a></li>
+</ul>
+{% end %}

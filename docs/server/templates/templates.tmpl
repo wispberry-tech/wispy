@@ -1,0 +1,30 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Template Composition - Wisp Documentation{% end %}
+
+{% block body %}
+<h1>Template Composition</h1>
+
+<p>Three mechanisms for composing templates: include, render, and component.</p>
+
+<table>
+  <tr><th>Mechanism</th><th>Scope</th><th>Use Case</th></tr>
+  <tr><td>include</td><td>Shared</td><td>Header, footer, partials</td></tr>
+  <tr><td>render</td><td>Isolated</td><td>Widgets, sandboxed execution</td></tr>
+  <tr><td>component</td><td>Isolated (props)</td><td>Reusable UI components</td></tr>
+</table>
+
+<h2>Include</h2>
+<pre><code>{% include "partials/header" %}</code></pre>
+
+<h2>Render</h2>
+<pre><code>{% render "widget" .data %}</code></pre>
+
+<h2>Component</h2>
+<pre><code>{% component "Button", label: "Click" %}</code></pre>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/layouts">Layout System</a></li>
+</ul>
+{% end %}

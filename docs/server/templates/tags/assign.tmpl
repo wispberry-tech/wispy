@@ -1,0 +1,31 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Assign Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Assign Tag</h1>
+
+<p>Creates or updates variables in the template context.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% assign variable = value %}
+{% assign variable = expression %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% assign name = "World" %}
+Hello, {{name}}!
+
+{% assign total = 10 + 5 %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Creates variables in current scope</li>
+  <li>Can store computed values</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/let">let tag</a></li>
+  <li><a href="/test/capture">capture tag</a></li>
+</ul>
+{% end %}

@@ -1,0 +1,35 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Case Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Case Tag</h1>
+
+<p>Multi-way conditionals, similar to switch statements.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% case variable %}
+  {% when "value1" %}Result 1
+  {% when "value2" %}Result 2
+  {% else %}Default Result
+{% end %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% case .status %}
+  {% when "active" %}Active
+  {% when "inactive" %}Inactive
+  {% else %}Unknown
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Compares value using equality</li>
+  <li>First matching when is executed</li>
+  <li>Else is optional</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/if">if tag</a></li>
+</ul>
+{% end %}

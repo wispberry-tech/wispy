@@ -1,0 +1,16 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Default Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Default Filter</h1>
+
+<p>Returns a default value if the input is empty.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% value | default: "fallback" %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% nil | default: "N/A" %}</code></pre>
+<p><strong>Output:</strong> N/A</p>
+{% end %}

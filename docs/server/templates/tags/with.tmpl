@@ -1,0 +1,26 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}With Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>With Tag</h1>
+
+<p>Creates a scoped context for accessing nested data.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% with expression as variable %}
+  Content
+{% end %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% with user as u %}
+{{u.name}}
+{{u.email}}
+{% end %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Creates scoped context</li>
+  <li>Useful for nested objects</li>
+</ul>
+{% end %}

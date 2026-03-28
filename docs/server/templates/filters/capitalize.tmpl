@@ -1,0 +1,25 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Capitalize Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Capitalize Filter</h1>
+
+<p>Converts the first character to uppercase and the rest to lowercase.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% "string" | capitalize %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% "hello" | capitalize %}</code></pre>
+<p><strong>Output:</strong> Hello</p>
+
+<pre><code>{% "HELLO" | capitalize %}</code></pre>
+<p><strong>Output:</strong> Hello</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/filters/upcase">upcase</a></li>
+  <li><a href="/test/filters/downcase">downcase</a></li>
+</ul>
+{% end %}

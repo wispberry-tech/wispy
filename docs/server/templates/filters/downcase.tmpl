@@ -1,0 +1,22 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Downcase Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Downcase Filter</h1>
+
+<p>Converts all characters to lowercase.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% "string" | downcase %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% "HELLO" | downcase %}</code></pre>
+<p><strong>Output:</strong> hello</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/filters/capitalize">capitalize</a></li>
+  <li><a href="/test/filters/upcase">upcase</a></li>
+</ul>
+{% end %}

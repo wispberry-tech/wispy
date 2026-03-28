@@ -1,0 +1,31 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Range Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Range Tag</h1>
+
+<p>Generates a sequence of numbers between a start and end value.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% range start end %}
+{% range start end step %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% for i in (range 1 5) %}
+{{i}}
+{% end %}</code></pre>
+<p><strong>Output:</strong> 1 2 3 4 5</p>
+
+<h2>Notes</h2>
+<ul>
+  <li>Used with for loops</li>
+  <li>Step is optional</li>
+  <li>End is inclusive</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/for">for tag</a></li>
+</ul>
+{% end %}

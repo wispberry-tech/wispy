@@ -1,0 +1,22 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Upcase Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Upcase Filter</h1>
+
+<p>Converts all characters to uppercase.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% "string" | upcase %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% "hello" | upcase %}</code></pre>
+<p><strong>Output:</strong> HELLO</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/filters/capitalize">capitalize</a></li>
+  <li><a href="/test/filters/downcase">downcase</a></li>
+</ul>
+{% end %}

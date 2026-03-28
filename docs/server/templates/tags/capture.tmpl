@@ -1,0 +1,23 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Capture Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Capture Tag</h1>
+
+<p>Captures output into a variable.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% capture variable %}...{% endcapture %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% capture greeting %}
+  Hello, {{name}}!
+{% endcapture %}
+{{greeting}}</code></pre>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/assign">assign tag</a></li>
+</ul>
+{% end %}

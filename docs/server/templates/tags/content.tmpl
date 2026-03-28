@@ -1,0 +1,36 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Content Tag - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Content Tag</h1>
+
+<p>Alternative syntax for defining content for parent template blocks.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% content block_name %}
+    Content for the block
+{% endcontent %}</code></pre>
+
+<h2>Description</h2>
+<p>Alternative to block tag for providing content to parent template blocks.</p>
+
+<h2>Examples</h2>
+
+<h3>Basic Content</h3>
+<pre><code>{% extends "parent" %}
+{% content title %}My Title{% endcontent %}
+{% content body %}Content here{% endcontent %}</code></pre>
+
+<h2>Notes</h2>
+<ul>
+  <li>Alternative to block syntax</li>
+  <li>Used with extends tag</li>
+</ul>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/test/extends">extends tag</a></li>
+  <li><a href="/test/block">block tag</a></li>
+</ul>
+{% end %}
