@@ -154,3 +154,80 @@ type FilterExpr struct {
 }
 
 func (*FilterExpr) groveNode() {}
+
+// ─── Control flow nodes ───────────────────────────────────────────────────────
+
+// ElifClause is a single elif branch in an IfNode.
+type ElifClause struct {
+	Condition Node
+	Body      []Node
+}
+
+// IfNode is {% if cond %}...{% elif cond %}...{% else %}...{% endif %}.
+type IfNode struct {
+	Condition Node
+	Body      []Node
+	Elifs     []ElifClause
+	Else      []Node // nil if no else branch
+	Line      int
+}
+
+func (*IfNode) groveNode() {}
+
+// UnlessNode is {% unless cond %}...{% endunless %} — equivalent to if not cond.
+type UnlessNode struct {
+	Condition Node
+	Body      []Node
+	Line      int
+}
+
+func (*UnlessNode) groveNode() {}
+
+// ForNode is {% for var in iterable %}...{% empty %}...{% endfor %}.
+// If Var2 is non-empty, it's a two-variable form (for k,v in map / for i,item in list).
+type ForNode struct {
+	Var1     string
+	Var2     string // empty for single-var form
+	Iterable Node
+	Body     []Node
+	Empty    []Node // nil if no {% empty %}
+	Line     int
+}
+
+func (*ForNode) groveNode() {}
+
+// SetNode is {% set name = expr %}.
+type SetNode struct {
+	Name string
+	Expr Node
+	Line int
+}
+
+func (*SetNode) groveNode() {}
+
+// WithNode is {% with %}...{% endwith %} — creates an isolated scope.
+type WithNode struct {
+	Body []Node
+	Line int
+}
+
+func (*WithNode) groveNode() {}
+
+// CaptureNode is {% capture name %}...{% endcapture %} — renders body to a string variable.
+type CaptureNode struct {
+	Name string
+	Body []Node
+	Line int
+}
+
+func (*CaptureNode) groveNode() {}
+
+// FuncCallNode is a function call expression: name(args...).
+// Only built-in functions are supported in Plan 2: range().
+type FuncCallNode struct {
+	Name string
+	Args []Node
+	Line int
+}
+
+func (*FuncCallNode) groveNode() {}
