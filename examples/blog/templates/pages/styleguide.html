@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Component Library — Grove Blog{% endblock %}
+
+{% block content %}
+{% meta name="description" content="A showcase of all reusable Grove components" %}
+
+<h1 style="margin: 0 0 0.5rem;">Component Library</h1>
+<p style="color: #666; margin: 0 0 2rem;">A showcase of every reusable component in the Grove Blog.</p>
+
+{# ── Buttons ─────────────────────────────────────────── #}
+<section style="margin-bottom: 3rem;">
+  <h2 style="border-bottom: 2px solid #e94560; padding-bottom: 0.5rem;">Buttons</h2>
+  <p style="color: #666;">The <code>button.html</code> component accepts <code>label</code>, <code>href</code>, and <code>variant</code> props.</p>
+  <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+    {% component "components/button.html" label="Primary" href="#" variant="primary" %}{% endcomponent %}
+    {% component "components/button.html" label="Secondary" href="#" variant="secondary" %}{% endcomponent %}
+    {% component "components/button.html" label="Outline" href="#" variant="outline" %}{% endcomponent %}
+    {% component "components/button.html" label="Default" href="#" %}{% endcomponent %}
+  </div>
+</section>
+
+{# ── Alerts ──────────────────────────────────────────── #}
+<section style="margin-bottom: 3rem;">
+  <h2 style="border-bottom: 2px solid #e94560; padding-bottom: 0.5rem;">Alerts</h2>
+  <p style="color: #666;">The <code>alert.html</code> component accepts a <code>type</code> prop and a default slot for the message body.</p>
+  <div style="display: grid; gap: 1rem; margin-top: 1rem;">
+    {% component "components/alert.html" type="info" %}
+      This is an <strong>info</strong> alert — useful for general messages.
+    {% endcomponent %}
+    {% component "components/alert.html" type="success" %}
+      This is a <strong>success</strong> alert — something went well!
+    {% endcomponent %}
+    {% component "components/alert.html" type="warning" %}
+      This is a <strong>warning</strong> alert — proceed with caution.
+    {% endcomponent %}
+    {% component "components/alert.html" type="error" %}
+      This is an <strong>error</strong> alert — something went wrong.
+    {% endcomponent %}
+  </div>
+</section>
+
+{# ── Tags ────────────────────────────────────────────── #}
+<section style="margin-bottom: 3rem;">
+  <h2 style="border-bottom: 2px solid #e94560; padding-bottom: 0.5rem;">Tags</h2>
+  <p style="color: #666;">The <code>tag.html</code> component accepts <code>label</code> and <code>color</code> props.</p>
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+    {% for color in tag_colors %}
+      {% component "components/tag.html" label=color | title color=color %}{% endcomponent %}
+    {% endfor %}
+    {% component "components/tag.html" label="Default" %}{% endcomponent %}
+  </div>
+</section>
+
+{# ── Cards ───────────────────────────────────────────── #}
+<section style="margin-bottom: 3rem;">
+  <h2 style="border-bottom: 2px solid #e94560; padding-bottom: 0.5rem;">Cards</h2>
+  <p style="color: #666;">The <code>card.html</code> component accepts <code>title</code>, <code>summary</code>, <code>href</code>, <code>date</code> props and a <code>tags</code> slot.</p>
+  <div style="display: grid; gap: 1.5rem; margin-top: 1rem;">
+    {% component "components/card.html" title="Card With Tags" summary="This card demonstrates the tags slot, which lets the caller inject tag components into the card footer." href="#" date="April 1, 2026" %}
+      {% fill "tags" %}
+        {% component "components/tag.html" label="Grove" color="purple" %}{% endcomponent %}
+        {% component "components/tag.html" label="Example" color="blue" %}{% endcomponent %}
+      {% endfill %}
+    {% endcomponent %}
+    {% component "components/card.html" title="Card Without Tags" summary="This card has no tags filled, showing the empty default slot. The date prop is also omitted." href="#" %}{% endcomponent %}
+    {% component "components/card.html" title="Card With Long Summary" summary="This card has a very long summary to demonstrate the truncate filter in action. The summary text will be cut off at 120 characters and an ellipsis will be appended to indicate there is more content." href="#" date="March 15, 2026" %}{% endcomponent %}
+  </div>
+</section>
+
+{# ── Navigation ──────────────────────────────────────── #}
+<section style="margin-bottom: 3rem;">
+  <h2 style="border-bottom: 2px solid #e94560; padding-bottom: 0.5rem;">Navigation</h2>
+  <p style="color: #666;">The <code>nav.html</code> component accepts <code>site_name</code> and an optional default slot for extra links. The nav bar at the top of this page is the default usage. Here is one with extra slot content:</p>
+  <div style="margin-top: 1rem; border-radius: 8px; overflow: hidden;">
+    {% component "components/nav.html" site_name="Custom Nav" %}
+      <a href="#" style="color: #e94560; text-decoration: none; font-weight: 600;">Extra Link</a>
+    {% endcomponent %}
+  </div>
+</section>
+
+{# ── Footer ──────────────────────────────────────────── #}
+<section style="margin-bottom: 3rem;">
+  <h2 style="border-bottom: 2px solid #e94560; padding-bottom: 0.5rem;">Footer</h2>
+  <p style="color: #666;">The <code>footer.html</code> component accepts a <code>year</code> prop. The footer at the bottom of this page is the default usage.</p>
+  <div style="margin-top: 1rem; border-radius: 8px; overflow: hidden;">
+    {% component "components/footer.html" year=current_year %}{% endcomponent %}
+  </div>
+</section>
+{% endblock %}

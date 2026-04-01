@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — Grove Blog{% endblock %}
+
+{% block content %}
+{% meta name="description" content="A blog post on Grove Blog" %}
+{% meta property="og:title" content="Grove Blog Post" %}
+{% asset "/static/highlight.css" type="stylesheet" %}
+
+{% if post.draft %}
+  {% component "components/alert.html" type="warning" %}
+    This post is a <strong>draft</strong> and is not yet published.
+  {% endcomponent %}
+{% endif %}
+
+<article style="background: #fff; border-radius: 8px; padding: 2rem; margin-top: 1rem;">
+  <header style="margin-bottom: 1.5rem;">
+    <h1 style="margin: 0 0 0.5rem;">{{ post.title }}</h1>
+    <time style="color: #888; font-size: 0.9rem;">{{ post.date }}</time>
+    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+      {% for tag in post.tags %}
+        {% component "components/tag.html" label=tag.name color=tag.color %}{% endcomponent %}
+      {% endfor %}
+    </div>
+  </header>
+  <div style="line-height: 1.7;">
+    {{ post.body | nl2br | safe }}
+  </div>
+</article>
+
+<div style="margin-top: 1.5rem;">
+  {% component "components/button.html" label="← Back to posts" href="/" variant="secondary" %}{% endcomponent %}
+</div>
+{% endblock %}

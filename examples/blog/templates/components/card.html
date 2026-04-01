@@ -1,0 +1,11 @@
+{% props title, summary, href="#", date="" %}
+<article style="border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; background: #fff; transition: box-shadow 0.2s;">
+  <h2 style="margin: 0 0 0.5rem;">
+    <a href="{{ href }}" style="color: #1a1a2e; text-decoration: none;">{{ title }}</a>
+  </h2>
+  {% if date %}<time style="color: #888; font-size: 0.85rem;">{{ date }}</time>{% endif %}
+  <p style="color: #555; margin: 0.75rem 0;">{{ summary | truncate(120) }}</p>
+  <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+    {% slot "tags" %}{% endslot %}
+  </div>
+</article>

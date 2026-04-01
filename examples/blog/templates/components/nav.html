@@ -1,0 +1,9 @@
+{% props site_name %}
+<nav style="background: #1a1a2e; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between;">
+  <a href="/" style="color: #e94560; font-size: 1.4rem; font-weight: bold; text-decoration: none;">{{ site_name }}</a>
+  <div style="display: flex; gap: 1.5rem; align-items: center;">
+    <a href="/" style="color: #eee; text-decoration: none;">Home</a>
+    <a href="/styleguide" style="color: #eee; text-decoration: none;">Components</a>
+    {% slot %}{% endslot %}
+  </div>
+</nav>

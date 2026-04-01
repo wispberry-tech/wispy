@@ -1,0 +1,14 @@
+{% props type="info" %}
+{% if type == "warning" %}
+  {% set bg = "#fff3cd" %}{% set border = "#ffc107" %}{% set fg = "#856404" %}{% set icon = "⚠" %}
+{% elif type == "error" %}
+  {% set bg = "#f8d7da" %}{% set border = "#f5c6cb" %}{% set fg = "#721c24" %}{% set icon = "✕" %}
+{% elif type == "success" %}
+  {% set bg = "#d4edda" %}{% set border = "#c3e6cb" %}{% set fg = "#155724" %}{% set icon = "✓" %}
+{% else %}
+  {% set bg = "#d1ecf1" %}{% set border = "#bee5eb" %}{% set fg = "#0c5460" %}{% set icon = "ℹ" %}
+{% endif %}
+<div style="padding: 1rem 1.25rem; background: {{ bg }}; border: 1px solid {{ border }}; border-radius: 6px; color: {{ fg }}; display: flex; gap: 0.75rem; align-items: flex-start;">
+  <span style="font-weight: bold; font-size: 1.1rem;">{{ icon }}</span>
+  <div>{% slot %}{% endslot %}</div>
+</div>

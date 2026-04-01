@@ -1,0 +1,15 @@
+{% props label, color="gray" %}
+{% if color == "blue" %}
+  {% set bg = "#dbeafe" %}{% set fg = "#1e40af" %}
+{% elif color == "green" %}
+  {% set bg = "#d1fae5" %}{% set fg = "#065f46" %}
+{% elif color == "red" %}
+  {% set bg = "#fee2e2" %}{% set fg = "#991b1b" %}
+{% elif color == "purple" %}
+  {% set bg = "#ede9fe" %}{% set fg = "#5b21b6" %}
+{% elif color == "orange" %}
+  {% set bg = "#ffedd5" %}{% set fg = "#9a3412" %}
+{% else %}
+  {% set bg = "#f3f4f6" %}{% set fg = "#374151" %}
+{% endif %}
+<span style="display: inline-block; padding: 0.2rem 0.6rem; background: {{ bg }}; color: {{ fg }}; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">{{ label }}</span>
