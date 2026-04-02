@@ -206,12 +206,17 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 	ip := 0
 	instrs := bc.Instrs
 	consts := precompileConsts(bc)
+	done := ctx.Done()
+	opcCount := 0
 	ps := profileInit()
 	for ip < len(instrs) {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		default:
+		opcCount++
+		if opcCount&63 == 0 {
+			select {
+			case <-done:
+				return "", ctx.Err()
+			default:
+			}
 		}
 
 		instr := instrs[ip]
