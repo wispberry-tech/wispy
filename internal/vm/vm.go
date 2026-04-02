@@ -13,6 +13,25 @@ import (
 	"grove/internal/scope"
 )
 
+// constCache maps compiled bytecode pointers to their pre-compiled Value slices.
+// Since bytecode is immutable after compilation, we convert the untyped constant
+// pool to []Value once and reuse it on every execution.
+var constCache sync.Map // map[*compiler.Bytecode][]Value
+
+// precompileConsts returns a []Value slice for the bytecode's constant pool,
+// caching it so subsequent executions skip the type-switch in fromConst.
+func precompileConsts(bc *compiler.Bytecode) []Value {
+	if cached, ok := constCache.Load(bc); ok {
+		return cached.([]Value)
+	}
+	vals := make([]Value, len(bc.Consts))
+	for i, c := range bc.Consts {
+		vals[i] = fromConst(c)
+	}
+	constCache.Store(bc, vals)
+	return vals
+}
+
 // renderCtx accumulates page-level data (assets, meta, hoisted HTML, warnings)
 // across an entire render pass including all sub-renders (components, includes, extends).
 type renderCtx struct {
@@ -186,6 +205,7 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 	ip := 0
 	instrs := bc.Instrs
+	consts := precompileConsts(bc)
 	ps := profileInit()
 	for ip < len(instrs) {
 		select {
@@ -207,7 +227,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			v.push(Nil)
 
 		case compiler.OP_PUSH_CONST:
-			v.push(fromConst(bc.Consts[instr.A]))
+			v.push(consts[instr.A])
 
 		case compiler.OP_LOAD:
 			name := bc.Names[instr.A]
