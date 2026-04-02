@@ -147,7 +147,8 @@ type Bytecode struct {
 	Blocks     []BlockDef      // compiled block bodies (parent defaults + child overrides)
 	Extends    string          // non-empty if this template uses {% extends %}
 	Props      []MacroParam    // from {% props %} declaration; nil = no declaration (permissive)
-	Components []ComponentDef  // one entry per {% component %} call in this template
+	Components         []ComponentDef // one entry per {% component %} call in this template
+	EstimatedOutputSize int           // sum of static string constant lengths (hint for output buffer)
 }
 
 // BlockIndex returns a map from block name to index in Blocks.

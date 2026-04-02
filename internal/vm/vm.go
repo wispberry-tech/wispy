@@ -175,6 +175,9 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 	}()
 	v.eng = eng
 	v.rc = rc
+	if bc.EstimatedOutputSize > 0 {
+		v.out.Grow(bc.EstimatedOutputSize)
+	}
 
 	globalSc := scope.New(nil)
 	for k, val := range eng.GlobalData() {

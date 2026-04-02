@@ -15,7 +15,7 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 		return nil, err
 	}
 	c.emit(OP_HALT, 0, 0, 0)
-	return &Bytecode{
+	bc := &Bytecode{
 		Instrs:     c.instrs,
 		Consts:     c.consts,
 		Names:      c.names,
@@ -24,7 +24,15 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 		Extends:    c.extends,
 		Props:      c.props,
 		Components: c.components,
-	}, nil
+	}
+	est := 0
+	for _, cn := range bc.Consts {
+		if s, ok := cn.(string); ok {
+			est += len(s)
+		}
+	}
+	bc.EstimatedOutputSize = est
+	return bc, nil
 }
 
 type cmp struct {
@@ -634,7 +642,7 @@ func (c *cmp) compileImport(n *ast.ImportNode) error {
 // correctly when the sub-bytecode runs in isolation (e.g. block bodies in
 // template inheritance, fill bodies in components, hoist bodies, etc.).
 func subBytecode(sub *cmp) *Bytecode {
-	return &Bytecode{
+	bc := &Bytecode{
 		Instrs:     sub.instrs,
 		Consts:     sub.consts,
 		Names:      sub.names,
@@ -642,6 +650,14 @@ func subBytecode(sub *cmp) *Bytecode {
 		Blocks:     sub.blocks,
 		Components: sub.components,
 	}
+	est := 0
+	for _, cn := range bc.Consts {
+		if s, ok := cn.(string); ok {
+			est += len(s)
+		}
+	}
+	bc.EstimatedOutputSize = est
+	return bc
 }
 
 // ─── Plan 7 compile methods ───────────────────────────────────────────────────
