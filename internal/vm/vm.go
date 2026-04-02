@@ -993,7 +993,7 @@ func (v *VM) makeLoopVal() Value {
 	} else {
 		ld.parent = nil
 	}
-	return LoopVarVal(ld)
+	return loopVarVal(ld)
 }
 
 // buildRange implements range(stop), range(start, stop), range(start, stop, step).

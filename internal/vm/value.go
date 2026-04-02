@@ -69,7 +69,7 @@ func ListVal(items []Value) Value         { return Value{typ: TypeList, oval: it
 func MapVal(m map[string]any) Value       { return Value{typ: TypeMap, oval: m} }
 func ResolvableVal(r Resolvable) Value    { return Value{typ: TypeResolvable, oval: r} }
 func MacroVal(m *compiler.MacroDef) Value { return Value{typ: TypeMacro, oval: m} }
-func LoopVarVal(d *loopVarData) Value     { return Value{typ: TypeLoopVar, oval: d} }
+func loopVarVal(d *loopVarData) Value     { return Value{typ: TypeLoopVar, oval: d} }
 
 // ─── String representation ────────────────────────────────────────────────────
 
@@ -319,7 +319,7 @@ func GetAttr(obj Value, name string, strict bool) (Value, error) {
 			return IntVal(int64(ld.depth)), nil
 		case "parent":
 			if ld.parent != nil {
-				return LoopVarVal(ld.parent), nil
+				return loopVarVal(ld.parent), nil
 			}
 			return Nil, nil
 		}
