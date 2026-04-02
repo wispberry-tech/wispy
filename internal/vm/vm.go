@@ -159,11 +159,11 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 
 	globalSc := scope.New(nil)
 	for k, val := range eng.GlobalData() {
-		globalSc.Set(k, val)
+		globalSc.Set(k, FromAny(val))
 	}
 	renderSc := scope.New(globalSc)
 	for k, val := range data {
-		renderSc.Set(k, val)
+		renderSc.Set(k, FromAny(val))
 	}
 	v.sc = scope.New(renderSc)
 
@@ -218,7 +218,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 				}
 				v.push(Nil)
 			} else {
-				v.push(FromAny(val))
+				v.push(val.(Value))
 			}
 
 		case compiler.OP_GET_ATTR:
@@ -504,7 +504,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Build macro scope: globals only (macros are isolated)
 			globalSc := scope.New(nil)
 			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, val)
+				globalSc.Set(k, FromAny(val))
 			}
 			macroSc := scope.New(globalSc)
 
@@ -537,7 +537,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			if !found {
 				return "", &runtimeErr{msg: "caller() called outside of a {% call %} block"}
 			}
-			callerVal := FromAny(callerRaw)
+			callerVal := callerRaw.(Value)
 			callerDef, ok := callerVal.AsMacroDef()
 			if !ok {
 				return "", &runtimeErr{msg: "caller() called outside of a {% call %} block"}
@@ -571,7 +571,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			if isolated {
 				globalSc := scope.New(nil)
 				for k, val := range v.eng.GlobalData() {
-					globalSc.Set(k, val)
+					globalSc.Set(k, FromAny(val))
 				}
 				v.sc = scope.New(globalSc)
 			}
@@ -606,7 +606,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 
 			globalSc := scope.New(nil)
 			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, val)
+				globalSc.Set(k, FromAny(val))
 			}
 			renderSc := scope.New(globalSc)
 			for k, val := range withVars {
@@ -633,7 +633,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Execute imported template in isolated scope to collect macro definitions
 			globalSc := scope.New(nil)
 			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, val)
+				globalSc.Set(k, FromAny(val))
 			}
 			importSc := scope.New(globalSc)
 			savedSC := v.sc
@@ -772,7 +772,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Set up isolated component scope: globals → component scope
 			globalSc := scope.New(nil)
 			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, val)
+				globalSc.Set(k, FromAny(val))
 			}
 			v.sc = scope.New(globalSc)
 
@@ -812,7 +812,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Bind props: passed value or default; error if required and missing
 			for _, p := range declared {
 				if val, ok := passed[p.Name]; ok {
-					v.sc.Set(p.Name, FromAny(val))
+					v.sc.Set(p.Name, val.(Value))
 				} else if p.Default != nil {
 					v.sc.Set(p.Name, fromConst(p.Default))
 				} else {
