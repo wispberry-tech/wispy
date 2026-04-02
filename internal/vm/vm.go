@@ -578,7 +578,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			if len(withVars) > 0 || isolated {
 				v.sc = scope.New(v.sc)
 				for k, val := range withVars {
-					v.sc.Set(k, val)
+					v.sc.Set(k, val.(Value))
 				}
 			}
 
@@ -610,7 +610,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 			renderSc := scope.New(globalSc)
 			for k, val := range withVars {
-				renderSc.Set(k, val)
+				renderSc.Set(k, val.(Value))
 			}
 
 			savedSC := v.sc
@@ -779,7 +779,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// If no {% props %} declaration (permissive mode), bind all props now
 			if compBC.Props == nil {
 				for k, val := range props {
-					v.sc.Set(k, val)
+					v.sc.Set(k, val.(Value))
 				}
 			}
 
