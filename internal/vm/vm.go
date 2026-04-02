@@ -122,7 +122,8 @@ type VM struct {
 	out        strings.Builder
 	loops      [32]loopState
 	loopVars   [32]loopVarData
-	ldepth     int // current loop depth (0 = not in loop)
+	loopScopes [32]*scope.Scope // pre-allocated scopes for loop bodies
+	ldepth     int              // current loop depth (0 = not in loop)
 	captures   [8]captureFrame
 	cdepth     int                             // current capture depth
 	blockSlots map[string][]*compiler.Bytecode // per-render block override table
@@ -170,6 +171,9 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 			v.blockChain = v.blockChain[:0]
 		}
 		v.csdepth = 0
+		for i := range v.loopScopes {
+			v.loopScopes[i] = nil
+		}
 		v.rc = nil
 		vmPool.Put(v)
 	}()
@@ -409,7 +413,18 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			v.sc.Set(bc.Names[instr.A], val)
 
 		case compiler.OP_PUSH_SCOPE:
-			v.sc = scope.New(v.sc)
+			if v.ldepth > 0 && v.loopScopes[v.ldepth-1] != nil {
+				// Reuse existing loop scope
+				v.loopScopes[v.ldepth-1].Reset(v.sc)
+				v.sc = v.loopScopes[v.ldepth-1]
+			} else if v.ldepth > 0 {
+				// First iteration: create scope, cache for reuse
+				s := scope.NewWithSize(v.sc, 3) // loop var + "loop" + maybe key
+				v.loopScopes[v.ldepth-1] = s
+				v.sc = s
+			} else {
+				v.sc = scope.New(v.sc)
+			}
 
 		case compiler.OP_POP_SCOPE:
 			if parent := v.sc.Parent(); parent != nil {

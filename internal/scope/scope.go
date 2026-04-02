@@ -13,6 +13,19 @@ func New(parent *Scope) *Scope {
 	return &Scope{vars: make(map[string]any), parent: parent}
 }
 
+// NewWithSize creates a scope with a pre-sized variable map.
+func NewWithSize(parent *Scope, size int) *Scope {
+	return &Scope{vars: make(map[string]any, size), parent: parent}
+}
+
+// Reset clears all variables and sets a new parent, reusing the map memory.
+func (s *Scope) Reset(parent *Scope) {
+	for k := range s.vars {
+		delete(s.vars, k)
+	}
+	s.parent = parent
+}
+
 // Set stores key=value in this scope frame.
 func (s *Scope) Set(key string, value any) {
 	s.vars[key] = value
