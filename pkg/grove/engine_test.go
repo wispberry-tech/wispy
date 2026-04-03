@@ -160,6 +160,24 @@ func TestExpressions_Ternary(t *testing.T) {
 	require.Equal(t, "Guest", got)
 }
 
+func TestExpressions_TernaryNested(t *testing.T) {
+	eng := newEngine(t)
+	// a ? b : c ? d : e  should be  a ? b : (c ? d : e)  (right-to-left)
+	got := render(t, eng, `{{ false ? "a" : true ? "b" : "c" }}`, grove.Data{})
+	require.Equal(t, "b", got)
+	got = render(t, eng, `{{ false ? "a" : false ? "b" : "c" }}`, grove.Data{})
+	require.Equal(t, "c", got)
+	got = render(t, eng, `{{ true ? "a" : true ? "b" : "c" }}`, grove.Data{})
+	require.Equal(t, "a", got)
+}
+
+func TestExpressions_TernaryFilterPrecedence(t *testing.T) {
+	eng := newEngine(t)
+	// Filters bind tighter than ? — (x | upper) is evaluated first
+	got := render(t, eng, `{{ true ? name | upper : "fallback" }}`, grove.Data{"name": "alice"})
+	require.Equal(t, "ALICE", got)
+}
+
 func TestExpressions_Not(t *testing.T) {
 	eng := newEngine(t)
 	got := render(t, eng, `{{ not banned }}`, grove.Data{"banned": false})

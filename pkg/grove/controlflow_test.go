@@ -383,3 +383,20 @@ func TestLet_NoOutput(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "beforeafter", result.Body)
 }
+
+func TestLet_MultiLineMapLiteral(t *testing.T) {
+	eng := grove.New()
+	tmpl := "{% let %}\n  themes = {\n    warn: \"yellow\",\n    err: \"red\",\n    info: \"blue\"\n  }\n  color = themes[type]\n{% endlet %}{{ color }}"
+	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"type": "err"})
+	require.NoError(t, err)
+	require.Equal(t, "red", result.Body)
+}
+
+func TestLet_TernaryInExpression(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  label = active ? \"on\" : \"off\"\n{% endlet %}{{ label }}",
+		grove.Data{"active": true})
+	require.NoError(t, err)
+	require.Equal(t, "on", result.Body)
+}
