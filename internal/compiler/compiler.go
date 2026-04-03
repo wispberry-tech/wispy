@@ -740,7 +740,7 @@ func (c *cmp) compileLet(n *ast.LetNode) error {
 	return c.compileLetBody(n.Body)
 }
 
-func (c *cmp) compileLetBody(stmts []any) error {
+func (c *cmp) compileLetBody(stmts []ast.LetStmt) error {
 	for _, stmt := range stmts {
 		switch s := stmt.(type) {
 		case *ast.LetAssignment:
@@ -752,8 +752,6 @@ func (c *cmp) compileLetBody(stmts []any) error {
 			if err := c.compileLetIf(s); err != nil {
 				return err
 			}
-		default:
-			return fmt.Errorf("compiler: unknown let body element %T", stmt)
 		}
 	}
 	return nil

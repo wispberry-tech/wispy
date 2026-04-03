@@ -824,13 +824,13 @@ func (lp *letParser) advance() lexer.Token {
 	return tok
 }
 
-func parseLetBody(tokens []lexer.Token, baseLine int) ([]any, error) {
+func parseLetBody(tokens []lexer.Token, baseLine int) ([]ast.LetStmt, error) {
 	lp := &letParser{tokens: tokens}
 	return lp.parseStatements()
 }
 
-func (lp *letParser) parseStatements() ([]any, error) {
-	var stmts []any
+func (lp *letParser) parseStatements() ([]ast.LetStmt, error) {
+	var stmts []ast.LetStmt
 	for lp.peek().Kind != lexer.TK_EOF {
 		tk := lp.peek()
 		if tk.Kind == lexer.TK_IDENT {

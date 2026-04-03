@@ -371,29 +371,36 @@ func (*MapLiteral) wispyNode() {}
 
 // ─── Let block nodes ─────────────────────────────────────────────────────────
 
+// LetStmt is a statement inside a let block (*LetAssignment or *LetIf).
+type LetStmt interface{ letStmt() }
+
 // LetAssignment is a single name = expression inside a let block.
 type LetAssignment struct {
 	Name string
 	Expr Node
 }
 
+func (*LetAssignment) letStmt() {}
+
 // LetIf is a conditional block inside a let block.
 type LetIf struct {
 	Condition Node
-	Body      []any // elements are *LetAssignment or *LetIf
+	Body      []LetStmt
 	Elifs     []LetElif
-	Else      []any // elements are *LetAssignment or *LetIf
+	Else      []LetStmt
 }
+
+func (*LetIf) letStmt() {}
 
 // LetElif is a single elif branch inside a LetIf.
 type LetElif struct {
 	Condition Node
-	Body      []any // elements are *LetAssignment or *LetIf
+	Body      []LetStmt
 }
 
 // LetNode is {% let %}...{% endlet %} — multi-variable assignment block.
 type LetNode struct {
-	Body []any // elements are *LetAssignment or *LetIf
+	Body []LetStmt
 	Line int
 }
 
