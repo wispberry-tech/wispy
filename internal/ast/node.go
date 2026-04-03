@@ -369,6 +369,36 @@ type MapLiteral struct {
 
 func (*MapLiteral) wispyNode() {}
 
+// ─── Let block nodes ─────────────────────────────────────────────────────────
+
+// LetAssignment is a single name = expression inside a let block.
+type LetAssignment struct {
+	Name string
+	Expr Node
+}
+
+// LetIf is a conditional block inside a let block.
+type LetIf struct {
+	Condition Node
+	Body      []any // elements are *LetAssignment or *LetIf
+	Elifs     []LetElif
+	Else      []any // elements are *LetAssignment or *LetIf
+}
+
+// LetElif is a single elif branch inside a LetIf.
+type LetElif struct {
+	Condition Node
+	Body      []any // elements are *LetAssignment or *LetIf
+}
+
+// LetNode is {% let %}...{% endlet %} — multi-variable assignment block.
+type LetNode struct {
+	Body []any // elements are *LetAssignment or *LetIf
+	Line int
+}
+
+func (*LetNode) wispyNode() {}
+
 // ─── Plan 7 nodes ─────────────────────────────────────────────────────────────
 
 // AssetNode declares an asset (CSS/JS/other) to collect into RenderResult.Assets.

@@ -12,6 +12,28 @@ func Tokenize(src string) ([]Token, error) {
 	return l.run()
 }
 
+// TokenizeLetBody tokenizes raw text as bare expression content (no delimiters).
+// It produces the same token kinds as the inner tag scanner but operates on
+// plain text (assignments, if/elif/else/end, expressions).
+func TokenizeLetBody(src string) ([]Token, error) {
+	l := &lx{src: src, line: 1, col: 1}
+	for l.pos < len(l.src) {
+		l.skipSpaces()
+		if l.pos >= len(l.src) {
+			break
+		}
+		if l.src[l.pos] == '\n' || l.src[l.pos] == '\r' {
+			l.advance()
+			continue
+		}
+		if err := l.lexOneToken(); err != nil {
+			return nil, err
+		}
+	}
+	l.tokens = append(l.tokens, Token{Kind: TK_EOF, Line: l.line, Col: l.col})
+	return l.tokens, nil
+}
+
 type lx struct {
 	src       string
 	pos       int

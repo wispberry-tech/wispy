@@ -4,6 +4,7 @@ package parser
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"grove/internal/ast"
 	"grove/internal/groverrors"
@@ -179,6 +180,9 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "for":
 		return p.parseFor(tagStart)
+
+	case "let":
+		return p.parseLet(tagStart)
 
 	case "set":
 		return p.parseSet(tagStart)
@@ -748,6 +752,177 @@ func (p *parser) consumeUntilEndraw(tagStart lexer.Token) (ast.Node, error) {
 	return nil, p.errorf(tagStart.Line, tagStart.Col, "unclosed raw block")
 }
 
+// ─── {% let %} ──────────────────────────────────────────────────────────────
+
+// captureUntilEndTag extracts raw text between the current position and {% tagName %}.
+// It consumes all tokens up to (but not including) the end tag.
+func (p *parser) captureUntilEndTag(tagName string) (string, error) {
+	var buf strings.Builder
+	for !p.atEOF() {
+		if p.peek().Kind == lexer.TK_TAG_START {
+			if p.pos+1 < len(p.tokens) {
+				name, ok := tokenTagName(p.tokens[p.pos+1])
+				if ok && name == tagName {
+					return buf.String(), nil
+				}
+			}
+		}
+		if p.peek().Kind == lexer.TK_TEXT {
+			buf.WriteString(p.peek().Value)
+		}
+		p.advance()
+	}
+	return buf.String(), nil
+}
+
+func (p *parser) parseLet(tagStart lexer.Token) (*ast.LetNode, error) {
+	p.advance() // consume "let"
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	raw, err := p.captureUntilEndTag("endlet")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endlet"); err != nil {
+		return nil, err
+	}
+	tokens, err := lexer.TokenizeLetBody(raw)
+	if err != nil {
+		return nil, p.errorf(tagStart.Line, tagStart.Col, "let block: %v", err)
+	}
+	body, err := parseLetBody(tokens, tagStart.Line)
+	if err != nil {
+		return nil, &groverrors.ParseError{
+			Line:    tagStart.Line,
+			Column:  tagStart.Col,
+			Message: err.Error(),
+		}
+	}
+	return &ast.LetNode{Body: body, Line: tagStart.Line}, nil
+}
+
+// ─── let block mini-parser ──────────────────────────────────────────────────
+
+type letParser struct {
+	tokens []lexer.Token
+	pos    int
+}
+
+func (lp *letParser) peek() lexer.Token {
+	if lp.pos >= len(lp.tokens) {
+		return lexer.Token{Kind: lexer.TK_EOF}
+	}
+	return lp.tokens[lp.pos]
+}
+
+func (lp *letParser) advance() lexer.Token {
+	tok := lp.peek()
+	if lp.pos < len(lp.tokens) {
+		lp.pos++
+	}
+	return tok
+}
+
+func parseLetBody(tokens []lexer.Token, baseLine int) ([]any, error) {
+	lp := &letParser{tokens: tokens}
+	return lp.parseStatements()
+}
+
+func (lp *letParser) parseStatements() ([]any, error) {
+	var stmts []any
+	for lp.peek().Kind != lexer.TK_EOF {
+		tk := lp.peek()
+		if tk.Kind == lexer.TK_IDENT {
+			switch tk.Value {
+			case "if":
+				ifNode, err := lp.parseIf()
+				if err != nil {
+					return nil, err
+				}
+				stmts = append(stmts, ifNode)
+			case "end", "elif", "else":
+				return stmts, nil
+			default:
+				assign, err := lp.parseAssignment()
+				if err != nil {
+					return nil, err
+				}
+				stmts = append(stmts, assign)
+			}
+		} else {
+			return nil, fmt.Errorf("let block line %d: unexpected token %q", tk.Line, tk.Value)
+		}
+	}
+	return stmts, nil
+}
+
+func (lp *letParser) parseAssignment() (*ast.LetAssignment, error) {
+	nameTok := lp.advance()
+	if lp.peek().Kind != lexer.TK_ASSIGN {
+		return nil, fmt.Errorf("let block line %d: expected '=' after %q", nameTok.Line, nameTok.Value)
+	}
+	lp.advance() // consume =
+	subP := &parser{tokens: lp.tokens, pos: lp.pos}
+	expr, err := subP.parseExpr(0)
+	if err != nil {
+		return nil, fmt.Errorf("let block line %d: %v", nameTok.Line, err)
+	}
+	lp.pos = subP.pos
+	return &ast.LetAssignment{Name: nameTok.Value, Expr: expr}, nil
+}
+
+func (lp *letParser) parseIf() (*ast.LetIf, error) {
+	lp.advance() // consume "if"
+	subP := &parser{tokens: lp.tokens, pos: lp.pos}
+	cond, err := subP.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	lp.pos = subP.pos
+
+	body, err := lp.parseStatements()
+	if err != nil {
+		return nil, err
+	}
+
+	node := &ast.LetIf{Condition: cond, Body: body}
+
+	for {
+		tk := lp.peek()
+		if tk.Kind == lexer.TK_IDENT && tk.Value == "elif" {
+			lp.advance()
+			subP := &parser{tokens: lp.tokens, pos: lp.pos}
+			elifCond, err := subP.parseExpr(0)
+			if err != nil {
+				return nil, err
+			}
+			lp.pos = subP.pos
+			elifBody, err := lp.parseStatements()
+			if err != nil {
+				return nil, err
+			}
+			node.Elifs = append(node.Elifs, ast.LetElif{Condition: elifCond, Body: elifBody})
+		} else if tk.Kind == lexer.TK_IDENT && tk.Value == "else" {
+			lp.advance()
+			elseBody, err := lp.parseStatements()
+			if err != nil {
+				return nil, err
+			}
+			node.Else = elseBody
+			break
+		} else {
+			break
+		}
+	}
+
+	if lp.peek().Kind != lexer.TK_IDENT || lp.peek().Value != "end" {
+		return nil, fmt.Errorf("let block: expected 'end' to close if, got %q", lp.peek().Value)
+	}
+	lp.advance()
+	return node, nil
+}
+
 // expectTagEnd consumes the closing %} of the current tag.
 func (p *parser) expectTagEnd() error {
 	if p.peek().Kind != lexer.TK_TAG_END {
@@ -814,7 +989,7 @@ func isCloseTag(name string) bool {
 	switch name {
 	case "endif", "endfor", "endcapture", "endmacro", "endcall",
 		"endblock", "endslot", "endcomponent", "endfill", "endhoist",
-		"else", "elif", "empty", "endraw":
+		"endlet", "else", "elif", "empty", "endraw":
 		return true
 	}
 	return false

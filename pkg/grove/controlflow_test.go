@@ -277,3 +277,109 @@ func TestCapture_InsideLoop(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "[a,b,c,]", result.Body)
 }
+
+// ─── LET ─────────────────────────────────────────────────────────────────────
+
+func TestLet_BasicAssignment(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  x = 42\n{% endlet %}{{ x }}", grove.Data{})
+	require.NoError(t, err)
+	require.Equal(t, "42", result.Body)
+}
+
+func TestLet_MultipleAssignments(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  a = 1\n  b = 2\n  c = 3\n{% endlet %}{{ a }},{{ b }},{{ c }}", grove.Data{})
+	require.NoError(t, err)
+	require.Equal(t, "1,2,3", result.Body)
+}
+
+func TestLet_WithConditional(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  x = \"default\"\n  if flag\n    x = \"flagged\"\n  end\n{% endlet %}{{ x }}",
+		grove.Data{"flag": true})
+	require.NoError(t, err)
+	require.Equal(t, "flagged", result.Body)
+}
+
+func TestLet_ConditionalFalse(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  x = \"default\"\n  if flag\n    x = \"flagged\"\n  end\n{% endlet %}{{ x }}",
+		grove.Data{"flag": false})
+	require.NoError(t, err)
+	require.Equal(t, "default", result.Body)
+}
+
+func TestLet_ElifElse(t *testing.T) {
+	eng := grove.New()
+	tmpl := "{% let %}\n  color = \"gray\"\n  if type == \"error\"\n    color = \"red\"\n  elif type == \"success\"\n    color = \"green\"\n  else\n    color = \"blue\"\n  end\n{% endlet %}{{ color }}"
+
+	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"type": "error"})
+	require.NoError(t, err)
+	require.Equal(t, "red", result.Body)
+
+	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"type": "success"})
+	require.NoError(t, err)
+	require.Equal(t, "green", result.Body)
+
+	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"type": "info"})
+	require.NoError(t, err)
+	require.Equal(t, "blue", result.Body)
+}
+
+func TestLet_ExpressionWithFilters(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  name = raw_name | upper\n{% endlet %}{{ name }}",
+		grove.Data{"raw_name": "alice"})
+	require.NoError(t, err)
+	require.Equal(t, "ALICE", result.Body)
+}
+
+func TestLet_WritesToOuterScope(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  x = 1\n{% endlet %}{% let %}\n  y = x + 1\n{% endlet %}{{ y }}",
+		grove.Data{})
+	require.NoError(t, err)
+	require.Equal(t, "2", result.Body)
+}
+
+func TestLet_NestedIf(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  x = 0\n  if a\n    if b\n      x = 1\n    end\n  end\n{% endlet %}{{ x }}",
+		grove.Data{"a": true, "b": true})
+	require.NoError(t, err)
+	require.Equal(t, "1", result.Body)
+}
+
+func TestLet_BlankLinesIgnored(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n\n  x = 1\n\n  y = 2\n\n{% endlet %}{{ x }},{{ y }}", grove.Data{})
+	require.NoError(t, err)
+	require.Equal(t, "1,2", result.Body)
+}
+
+func TestLet_WithMapLiteral(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"{% let %}\n  theme = {bg: \"#fff\", fg: \"#000\"}\n{% endlet %}{{ theme.bg }}",
+		grove.Data{})
+	require.NoError(t, err)
+	require.Equal(t, "#fff", result.Body)
+}
+
+func TestLet_NoOutput(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		"before{% let %}\n  x = 1\n{% endlet %}after",
+		grove.Data{})
+	require.NoError(t, err)
+	require.Equal(t, "beforeafter", result.Body)
+}

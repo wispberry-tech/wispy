@@ -222,6 +222,9 @@ func (c *cmp) compileNode(node ast.Node) error {
 	case *ast.ComponentNode:
 		return c.compileComponent(n)
 
+	case *ast.LetNode:
+		return c.compileLet(n)
+
 	case *ast.AssetNode:
 		return c.compileAsset(n)
 
@@ -728,5 +731,69 @@ func (c *cmp) compileComponent(n *ast.ComponentNode) error {
 	}
 
 	c.emit(OP_COMPONENT, uint16(compIdx), uint16(len(n.Props)), 0)
+	return nil
+}
+
+// ─── {% let %} compiler ──────────────────────────────────────────────────────
+
+func (c *cmp) compileLet(n *ast.LetNode) error {
+	return c.compileLetBody(n.Body)
+}
+
+func (c *cmp) compileLetBody(stmts []any) error {
+	for _, stmt := range stmts {
+		switch s := stmt.(type) {
+		case *ast.LetAssignment:
+			if err := c.compileExpr(s.Expr); err != nil {
+				return err
+			}
+			c.emit(OP_STORE_VAR, uint16(c.addName(s.Name)), 0, 0)
+		case *ast.LetIf:
+			if err := c.compileLetIf(s); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("compiler: unknown let body element %T", stmt)
+		}
+	}
+	return nil
+}
+
+func (c *cmp) compileLetIf(n *ast.LetIf) error {
+	if err := c.compileExpr(n.Condition); err != nil {
+		return err
+	}
+	jfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
+
+	if err := c.compileLetBody(n.Body); err != nil {
+		return err
+	}
+
+	var endJumps []int
+	endJumps = append(endJumps, c.emitPlaceholder(OP_JUMP))
+	c.instrs[jfIdx].A = uint16(len(c.instrs))
+
+	for _, elif := range n.Elifs {
+		if err := c.compileExpr(elif.Condition); err != nil {
+			return err
+		}
+		elifJfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
+		if err := c.compileLetBody(elif.Body); err != nil {
+			return err
+		}
+		endJumps = append(endJumps, c.emitPlaceholder(OP_JUMP))
+		c.instrs[elifJfIdx].A = uint16(len(c.instrs))
+	}
+
+	if len(n.Else) > 0 {
+		if err := c.compileLetBody(n.Else); err != nil {
+			return err
+		}
+	}
+
+	end := uint16(len(c.instrs))
+	for _, jIdx := range endJumps {
+		c.instrs[jIdx].A = end
+	}
 	return nil
 }
