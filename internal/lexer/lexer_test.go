@@ -133,9 +133,9 @@ func TestLexer_Comparison(t *testing.T) {
 }
 
 func TestLexer_Keywords(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ a and b or not c if x else y }}")
+	toks, err := lexer.Tokenize("{{ a and b or not c }}")
 	require.NoError(t, err)
-	want := []lexer.TokenKind{lexer.TK_AND, lexer.TK_OR, lexer.TK_NOT, lexer.TK_IF, lexer.TK_ELSE}
+	want := []lexer.TokenKind{lexer.TK_AND, lexer.TK_OR, lexer.TK_NOT}
 	var got []lexer.TokenKind
 	for _, tk := range toks {
 		for _, k := range want {
@@ -145,6 +145,33 @@ func TestLexer_Keywords(t *testing.T) {
 		}
 	}
 	require.Equal(t, want, got)
+}
+
+func TestLexer_TernaryTokens(t *testing.T) {
+	toks, err := lexer.Tokenize("{{ a ? b : c }}")
+	require.NoError(t, err)
+	want := []lexer.TokenKind{lexer.TK_QUESTION, lexer.TK_COLON}
+	var got []lexer.TokenKind
+	for _, tk := range toks {
+		for _, k := range want {
+			if tk.Kind == k {
+				got = append(got, tk.Kind)
+			}
+		}
+	}
+	require.Equal(t, want, got)
+}
+
+func TestLexer_IfElseAreIdents(t *testing.T) {
+	toks, err := lexer.Tokenize("{{ if }}")
+	require.NoError(t, err)
+	for _, tk := range toks {
+		if tk.Value == "if" {
+			require.Equal(t, lexer.TK_IDENT, tk.Kind)
+			return
+		}
+	}
+	t.Fatal("no 'if' token found")
 }
 
 func TestLexer_BoolLiterals(t *testing.T) {

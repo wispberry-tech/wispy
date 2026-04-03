@@ -305,6 +305,10 @@ func (l *lx) lexOneToken() error {
 		kind = TK_COMMA
 	case '=':
 		kind = TK_ASSIGN
+	case '?':
+		kind = TK_QUESTION
+	case ':':
+		kind = TK_COLON
 	default:
 		return &lexErr{line: line, msg: fmt.Sprintf("unexpected character: %q", ch)}
 	}
@@ -401,10 +405,6 @@ func (l *lx) lexIdent() error {
 		kind = TK_OR
 	case "not":
 		kind = TK_NOT
-	case "if":
-		kind = TK_IF
-	case "else":
-		kind = TK_ELSE
 	case "true":
 		kind = TK_TRUE
 	case "false":

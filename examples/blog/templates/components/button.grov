@@ -9,4 +9,4 @@
   {% set bg = "#6c757d" %}{% set fg = "#fff" %}
 {% endif %}
 
-<a href="{{ href }}" style="display: inline-block; padding: 0.5rem 1.25rem; background: {{ bg }}; color: {{ fg }}; border: 2px solid {{ bg if variant != "outline" else "#e94560" }}; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">{{ label }}</a>
+<a href="{{ href }}" style="display: inline-block; padding: 0.5rem 1.25rem; background: {{ bg }}; color: {{ fg }}; border: 2px solid {{ variant != "outline" ? bg : "#e94560" }}; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.9rem;">{{ label }}</a>

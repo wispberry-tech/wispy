@@ -101,10 +101,6 @@ func tokenTagName(tk lexer.Token) (string, bool) {
 	switch tk.Kind {
 	case lexer.TK_IDENT:
 		return tk.Value, true
-	case lexer.TK_IF:
-		return "if", true
-	case lexer.TK_ELSE:
-		return "else", true
 	case lexer.TK_NOT:
 		return "not", true
 	case lexer.TK_IN:
@@ -445,23 +441,23 @@ func (p *parser) parseExpr(minPrec int) (ast.Node, error) {
 		}
 
 		switch tk.Kind {
-		case lexer.TK_IF:
-			p.advance() // consume if
-			cond, err := p.parseExpr(0)
+		case lexer.TK_QUESTION:
+			p.advance() // consume ?
+			consequence, err := p.parseExpr(0)
 			if err != nil {
 				return nil, err
 			}
-			if p.peek().Kind != lexer.TK_ELSE {
-				return nil, p.errorf(p.peek().Line, p.peek().Col, "expected 'else' in ternary expression")
+			if p.peek().Kind != lexer.TK_COLON {
+				return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ':' in ternary expression")
 			}
-			p.advance() // consume else
+			p.advance() // consume :
 			alt, err := p.parseExpr(0)
 			if err != nil {
 				return nil, err
 			}
 			left = &ast.TernaryExpr{
-				Condition:   cond,
-				Consequence: left,
+				Condition:   left,
+				Consequence: consequence,
 				Alternative: alt,
 				Line:        tk.Line,
 			}
@@ -639,7 +635,7 @@ func (p *parser) parseFilter(value ast.Node) (ast.Node, error) {
 
 func infixPrec(k lexer.TokenKind) (int, bool) {
 	switch k {
-	case lexer.TK_IF:
+	case lexer.TK_QUESTION:
 		return 5, true
 	case lexer.TK_OR:
 		return 10, true

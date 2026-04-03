@@ -133,8 +133,7 @@ type UnaryExpr struct {
 
 func (*UnaryExpr) wispyNode() {}
 
-// TernaryExpr is: Consequence if Condition else Alternative
-// (Wispy syntax: `value if cond else fallback`)
+// TernaryExpr is: Condition ? Consequence : Alternative
 type TernaryExpr struct {
 	Condition   Node
 	Consequence Node

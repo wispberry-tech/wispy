@@ -148,13 +148,13 @@ func TestExpressions_LogicalOperators(t *testing.T) {
 	require.Equal(t, "false", got)
 }
 
-func TestExpressions_InlineTernary(t *testing.T) {
+func TestExpressions_Ternary(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
+	got := render(t, eng, `{{ active ? name : "Guest" }}`, grove.Data{
 		"name": "Alice", "active": true,
 	})
 	require.Equal(t, "Alice", got)
-	got = render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
+	got = render(t, eng, `{{ active ? name : "Guest" }}`, grove.Data{
 		"name": "Alice", "active": false,
 	})
 	require.Equal(t, "Guest", got)
