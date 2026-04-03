@@ -160,13 +160,6 @@ func (c *cmp) compileNode(node ast.Node) error {
 		}
 		c.emit(OP_STORE_VAR, uint16(c.addName(n.Name)), 0, 0)
 
-	case *ast.WithNode:
-		c.emit(OP_PUSH_SCOPE, 0, 0, 0)
-		if err := c.compileBody(n.Body); err != nil {
-			return err
-		}
-		c.emit(OP_POP_SCOPE, 0, 0, 0)
-
 	case *ast.CaptureNode:
 		c.emit(OP_CAPTURE_START, uint16(c.addName(n.Name)), 0, 0)
 		if err := c.compileBody(n.Body); err != nil {

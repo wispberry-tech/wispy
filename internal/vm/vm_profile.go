@@ -20,7 +20,7 @@ const (
 	CatArith            // OP_ADD, OP_SUB, OP_MUL, OP_DIV, OP_MOD, OP_CONCAT, OP_NEGATE
 	CatCompare          // OP_EQ, OP_NEQ, OP_LT, OP_LTE, OP_GT, OP_GTE
 	CatControl          // OP_JUMP, OP_JUMP_FALSE, OP_AND, OP_OR, OP_NOT
-	CatScope            // OP_PUSH_SCOPE, OP_POP_SCOPE, OP_STORE_VAR
+	CatScope            // OP_STORE_VAR
 	CatStack            // OP_PUSH_CONST, OP_PUSH_NIL, OP_HALT
 	CatOther            // everything else
 	CatCount
@@ -102,7 +102,7 @@ func opcodeCategory(op compiler.Opcode) int {
 		return CatCompare
 	case compiler.OP_JUMP, compiler.OP_JUMP_FALSE, compiler.OP_AND, compiler.OP_OR, compiler.OP_NOT:
 		return CatControl
-	case compiler.OP_PUSH_SCOPE, compiler.OP_POP_SCOPE, compiler.OP_STORE_VAR:
+	case compiler.OP_STORE_VAR:
 		return CatScope
 	case compiler.OP_PUSH_CONST, compiler.OP_PUSH_NIL, compiler.OP_HALT:
 		return CatStack

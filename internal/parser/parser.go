@@ -188,7 +188,11 @@ func (p *parser) parseTag() (ast.Node, error) {
 		return p.parseSet(tagStart)
 
 	case "with":
-		return p.parseWith(tagStart)
+		return nil, &groverrors.ParseError{
+			Line:    tagStart.Line,
+			Column:  tagStart.Col,
+			Message: `unknown tag "with": use {% let %} or {% set %} instead`,
+		}
 
 	case "capture":
 		return p.parseCapture(tagStart)
@@ -402,23 +406,6 @@ func (p *parser) parseSet(tagStart lexer.Token) (*ast.SetNode, error) {
 		return nil, err
 	}
 	return &ast.SetNode{Name: nameTok.Value, Expr: expr, Line: tagStart.Line}, nil
-}
-
-// ─── {% with %} ───────────────────────────────────────────────────────────────
-
-func (p *parser) parseWith(tagStart lexer.Token) (*ast.WithNode, error) {
-	p.advance() // consume "with"
-	if err := p.expectTagEnd(); err != nil {
-		return nil, err
-	}
-	body, err := p.parseBody("endwith")
-	if err != nil {
-		return nil, err
-	}
-	if err := p.expectTag("endwith"); err != nil {
-		return nil, err
-	}
-	return &ast.WithNode{Body: body, Line: tagStart.Line}, nil
 }
 
 // ─── {% capture %} ────────────────────────────────────────────────────────────
@@ -775,7 +762,7 @@ func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.P
 // These are tags that are always needed as syntactic closers (e.g. endif, endfor, else, etc.).
 func isCloseTag(name string) bool {
 	switch name {
-	case "endif", "endfor", "endwith", "endcapture", "endmacro", "endcall",
+	case "endif", "endfor", "endcapture", "endmacro", "endcall",
 		"endblock", "endslot", "endcomponent", "endfill", "endhoist",
 		"else", "elif", "empty", "endraw":
 		return true

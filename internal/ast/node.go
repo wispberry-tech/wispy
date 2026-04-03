@@ -196,14 +196,6 @@ type SetNode struct {
 
 func (*SetNode) wispyNode() {}
 
-// WithNode is {% with %}...{% endwith %} — creates an isolated scope.
-type WithNode struct {
-	Body []Node
-	Line int
-}
-
-func (*WithNode) wispyNode() {}
-
 // CaptureNode is {% capture name %}...{% endcapture %} — renders body to a string variable.
 type CaptureNode struct {
 	Name string

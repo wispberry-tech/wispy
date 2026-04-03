@@ -214,24 +214,12 @@ func TestSet_StringConcat(t *testing.T) {
 	require.Equal(t, "Hello, World", result.Body)
 }
 
-// ─── WITH ─────────────────────────────────────────────────────────────────────
-
-func TestWith_ScopeIsolation(t *testing.T) {
+func TestWith_Removed(t *testing.T) {
 	eng := grove.New()
-	result, err := eng.RenderTemplate(context.Background(),
-		`{% with %}{% set x = 99 %}{{ x }}{% endwith %}[{{ x }}]`,
+	_, err := eng.RenderTemplate(context.Background(),
+		`{% with %}{% set x = 99 %}{% endwith %}`,
 		grove.Data{})
-	require.NoError(t, err)
-	require.Equal(t, "99[]", result.Body)
-}
-
-func TestWith_AccessesOuterScope(t *testing.T) {
-	eng := grove.New()
-	result, err := eng.RenderTemplate(context.Background(),
-		`{% with %}{{ name }}{% endwith %}`,
-		grove.Data{"name": "Wispy"})
-	require.NoError(t, err)
-	require.Equal(t, "Wispy", result.Body)
+	require.Error(t, err)
 }
 
 // ─── CAPTURE ─────────────────────────────────────────────────────────────────

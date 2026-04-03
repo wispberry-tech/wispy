@@ -412,25 +412,6 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			val := v.pop()
 			v.sc.Set(bc.Names[instr.A], val)
 
-		case compiler.OP_PUSH_SCOPE:
-			if v.ldepth > 0 && v.loopScopes[v.ldepth-1] != nil {
-				// Reuse existing loop scope
-				v.loopScopes[v.ldepth-1].Reset(v.sc)
-				v.sc = v.loopScopes[v.ldepth-1]
-			} else if v.ldepth > 0 {
-				// First iteration: create scope, cache for reuse
-				s := scope.NewWithSize(v.sc, 3) // loop var + "loop" + maybe key
-				v.loopScopes[v.ldepth-1] = s
-				v.sc = s
-			} else {
-				v.sc = scope.New(v.sc)
-			}
-
-		case compiler.OP_POP_SCOPE:
-			if parent := v.sc.Parent(); parent != nil {
-				v.sc = parent
-			}
-
 		case compiler.OP_FOR_INIT:
 			coll := v.pop()
 			ls, ok := v.makeLoopState(coll)
