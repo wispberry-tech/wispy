@@ -1,3 +1,9 @@
 
 blog
 !blog/
+store
+!store/
+email
+!email/
+docs
+!docs/
