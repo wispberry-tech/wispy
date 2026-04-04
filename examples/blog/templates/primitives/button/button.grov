@@ -1,0 +1,8 @@
+{% props label, href="#", variant="primary", type="link" %}
+{% asset "/js/primitives/button/button.js" type="script" %}
+
+{% if type == "link" %}
+  <a href="{{ href }}" class="btn btn-{{ variant }}" data-button>{{ label }}</a>
+{% else %}
+  <button type="{{ type }}" class="btn btn-{{ variant }}" data-button>{{ label }}</button>
+{% endif %}

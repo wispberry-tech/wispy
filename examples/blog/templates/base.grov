@@ -10,11 +10,11 @@
   <!-- HEAD_HOISTED -->
 </head>
 <body>
-  {% component "components/nav.grov" site_name=site_name %}{% endcomponent %}
+  {% component "composites/nav" site_name=site_name %}{% endcomponent %}
   <main class="container">
     {% block content %}{% endblock %}
   </main>
-  {% component "components/footer.grov" year=current_year %}{% endcomponent %}
+  {% component "primitives/footer" year=current_year %}{% endcomponent %}
   <!-- FOOT_ASSETS -->
 </body>
 </html>

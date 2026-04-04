@@ -6,7 +6,7 @@
 {% meta name="description" content="A blog post on Grove Blog" %}
 {% meta property="og:title" content="Grove Blog Post" %}
 
-{% include "components/breadcrumbs.grov" %}
+{% include "composites/breadcrumbs/breadcrumbs.grov" %}
 
 {% if post.draft %}
   <div class="notice notice-warning">
@@ -25,7 +25,7 @@
     </div>
     <div class="tag-list">
       {% for tag in post.tags %}
-        {% component "components/tag-badge.grov" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
+        {% component "primitives/tag-badge" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
       {% endfor %}
     </div>
   </header>
@@ -35,17 +35,17 @@
   </div>
 </article>
 
-{% component "components/author-card.grov" name=post.author.name slug=post.author.slug bio=post.author.bio avatar_url=post.author.avatar_url role=post.author.role %}{% endcomponent %}
+{% component "composites/author-card" name=post.author.name slug=post.author.slug bio=post.author.bio avatar_url=post.author.avatar_url role=post.author.role %}{% endcomponent %}
 
 {% if related_posts | length > 0 %}
   <section class="related-posts">
     <h2>Related Posts</h2>
     <div class="post-grid">
       {% for rp in related_posts %}
-        {% component "components/card.grov" title=rp.title summary=rp.summary href="/post/" ~ rp.slug date=rp.date %}
+        {% component "composites/card" title=rp.title summary=rp.summary href="/post/" ~ rp.slug date=rp.date %}
           {% fill "tags" %}
             {% for tag in rp.tags %}
-              {% component "components/tag-badge.grov" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
+              {% component "primitives/tag-badge" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
             {% endfor %}
           {% endfill %}
         {% endcomponent %}

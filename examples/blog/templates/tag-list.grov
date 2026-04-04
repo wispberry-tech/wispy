@@ -3,7 +3,7 @@
 {% block title %}Tags &mdash; Grove Blog{% endblock %}
 
 {% block content %}
-{% include "components/breadcrumbs.grov" %}
+{% include "composites/breadcrumbs/breadcrumbs.grov" %}
 
 <h1>Tags</h1>
 <div class="tag-grid">

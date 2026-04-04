@@ -476,6 +476,9 @@ func main() {
 	staticDir := filepath.Join(baseDir, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
+	// Serve colocated JS from component directories
+	r.Handle("/js/*", http.StripPrefix("/js/", http.FileServer(http.Dir(templateDir))))
+
 	fmt.Println("Grove Blog listening on http://localhost:3000")
 	log.Fatal(http.ListenAndServe(":3000", r))
 }
