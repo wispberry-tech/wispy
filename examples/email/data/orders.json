@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ORD-2026-1847",
+    "user_id": 1,
+    "items": [
+      {"name": "Pro Plan (Annual)", "quantity": 1, "price": 19900},
+      {"name": "Additional Team Seat", "quantity": 3, "price": 4900}
+    ],
+    "total": 34600,
+    "date": "2026-04-01"
+  },
+  {
+    "id": "ORD-2026-1923",
+    "user_id": 3,
+    "items": [
+      {"name": "Enterprise Plan (Annual)", "quantity": 1, "price": 99900},
+      {"name": "Priority Support Add-on", "quantity": 1, "price": 29900},
+      {"name": "Additional Storage (100GB)", "quantity": 2, "price": 9900}
+    ],
+    "total": 149600,
+    "date": "2026-04-03"
+  },
+  {
+    "id": "ORD-2026-2001",
+    "user_id": 2,
+    "items": [],
+    "total": 0,
+    "date": "2026-04-04"
+  }
+]

@@ -1,48 +1,55 @@
 {% extends "base-email.grov" %}
 {% import "helpers.grov" as h %}
 
-{% block preheader %}
-  {% capture preheader_text %}Order {{ order.id }} confirmed — thanks for your purchase!{% endcapture %}
-  {% hoist target="preheader" %}{{ preheader_text }}{% endhoist %}
-  <div style="display: none; max-height: 0; overflow: hidden;">
-    {{ preheader_text }}
-  </div>
-{% endblock %}
+{% block title %}Order Confirmation — {{ order.id }}{% endblock %}
+
+{% hoist target="preheader" %}Your order {{ order.id | upper }} has been confirmed. Total: {{ order.total | currency }}.{% endhoist %}
 
 {% block body %}
-  <h1 style="margin: 0 0 16px; color: #251917;">Order Confirmed!</h1>
-  <p style="color: #3D2E2A;">Hi {{ user.name | default("Customer") }}, your order <strong>{{ order.id | upper }}</strong> has been placed.</p>
+  <p>Hi {{ user.name | default("Customer") }},</p>
+  <p>Thank you for your order! Here's your receipt:</p>
 
   {{ h.divider() }}
 
-  <table style="width: 100%; border-collapse: collapse;">
+  {{ h.heading("Order " ~ order.id | upper) }}
+
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
     <thead>
-      <tr>
-        <th style="text-align: left; padding: 8px 0; border-bottom: 2px solid #D9D3CB;">Item</th>
-        <th style="text-align: center; padding: 8px 0; border-bottom: 2px solid #D9D3CB;">Qty</th>
-        <th style="text-align: right; padding: 8px 0; border-bottom: 2px solid #D9D3CB;">Price</th>
+      <tr style="border-bottom: 2px solid #2E6740;">
+        <th style="text-align: left; padding: 8px 0;">Item</th>
+        <th style="text-align: center; padding: 8px 0;">Qty</th>
+        <th style="text-align: right; padding: 8px 0;">Price</th>
+        <th style="text-align: right; padding: 8px 0;">Total</th>
       </tr>
     </thead>
     <tbody>
       {% for item in order.items %}
-        <tr>
-          <td style="padding: 8px 0; border-bottom: 1px solid #F7F5F0;">{{ item.name }}</td>
-          <td style="text-align: center; padding: 8px 0; border-bottom: 1px solid #F7F5F0;">{{ item.quantity }}</td>
-          <td style="text-align: right; padding: 8px 0; border-bottom: 1px solid #F7F5F0;">{{ item.line_total | currency }}</td>
+        <tr style="border-bottom: 1px solid #e0e0e0;">
+          <td style="padding: 12px 0;">{{ item.name }}</td>
+          <td style="padding: 12px 0; text-align: center;">{{ item.quantity }}</td>
+          <td style="padding: 12px 0; text-align: right;">{{ item.price | currency }}</td>
+          <td style="padding: 12px 0; text-align: right; font-weight: bold;">{{ item.line_total | currency }}</td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="3" style="padding: 16px 0; text-align: center; color: #7A6B66;">No items in this order.</td>
+          <td colspan="4" style="padding: 12px 0; text-align: center; color: #666;">No items in this order.</td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 
   {{ h.spacer(8) }}
-  <div style="text-align: right; font-size: 18px; font-weight: bold;">
-    Total: {{ order.total | currency }}
-  </div>
+
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    <tr>
+      <td style="text-align: right; padding: 8px 0; font-size: 18px; font-weight: bold;">
+        Total: {{ order.total | currency }}
+      </td>
+    </tr>
+  </table>
 
   {{ h.divider() }}
-  {{ h.button("View Order", "https://example.com/orders/" ~ order.id) }}
+  {{ h.button("View Order", "https://app.grovecloud.io/orders/" ~ order.id) }}
+
+  <p style="color: #666; font-size: 14px;">A receipt has been sent to {{ user.email }}.</p>
 {% endblock %}

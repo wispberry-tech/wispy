@@ -1,0 +1,34 @@
+{
+  "default": {
+    "reset_link": "https://app.grovecloud.io/reset?token=abc123def456",
+    "reset_expiry": "24 hours",
+    "old_plan": "free",
+    "new_plan": "pro",
+    "usage_limit": 10000,
+    "usage_current": 7200
+  },
+  "expired_token": {
+    "reset_link": "https://app.grovecloud.io/reset?token=expired789",
+    "reset_expiry": "expired",
+    "old_plan": "free",
+    "new_plan": "pro",
+    "usage_limit": 10000,
+    "usage_current": 7200
+  },
+  "downgrade": {
+    "reset_link": "https://app.grovecloud.io/reset?token=abc123def456",
+    "reset_expiry": "24 hours",
+    "old_plan": "enterprise",
+    "new_plan": "pro",
+    "usage_limit": 10000,
+    "usage_current": 7200
+  },
+  "critical_usage": {
+    "reset_link": "https://app.grovecloud.io/reset?token=abc123def456",
+    "reset_expiry": "24 hours",
+    "old_plan": "free",
+    "new_plan": "pro",
+    "usage_limit": 10000,
+    "usage_current": 9500
+  }
+}

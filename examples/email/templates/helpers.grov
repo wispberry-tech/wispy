@@ -1,13 +1,45 @@
 {% macro button(text, href, color) %}
   {% if not color %}{% set color = "#2E6740" %}{% endif %}
-  <a href="{{ href }}" style="display: inline-block; padding: 12px 24px; background: {{ color }}; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">{{ text }}</a>
+  <table cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0;">
+    <tr>
+      <td style="background-color: {{ color }}; border-radius: 6px; padding: 12px 24px;">
+        <a href="{{ href }}" style="color: #ffffff; text-decoration: none; font-weight: bold; display: inline-block;">{{ text }}</a>
+      </td>
+    </tr>
+  </table>
 {% endmacro %}
 
 {% macro divider() %}
-  <hr style="border: none; border-top: 1px solid #D9D3CB; margin: 24px 0;">
+  <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;">
 {% endmacro %}
 
 {% macro spacer(height) %}
   {% if not height %}{% set height = 16 %}{% endif %}
   <div style="height: {{ height }}px;"></div>
+{% endmacro %}
+
+{% macro heading(text) %}
+  <h2 style="color: #2E6740; margin: 0 0 16px; font-size: 20px;">{{ text }}</h2>
+{% endmacro %}
+
+{% macro usage_bar(pct, color) %}
+  {% if not color %}
+    {% if pct >= 90 %}
+      {% set color = "#dc3545" %}
+    {% elif pct >= 75 %}
+      {% set color = "#ffc107" %}
+    {% else %}
+      {% set color = "#2E6740" %}
+    {% endif %}
+  {% endif %}
+  <div style="background-color: #e9ecef; border-radius: 4px; height: 24px; margin: 8px 0; overflow: hidden;">
+    <div style="background-color: {{ color }}; height: 100%; width: {{ pct }}%; border-radius: 4px; transition: width 0.3s;"></div>
+  </div>
+{% endmacro %}
+
+{% macro info_row(label, value) %}
+  <tr>
+    <td style="padding: 8px 0; color: #666666; width: 140px;">{{ label }}</td>
+    <td style="padding: 8px 0; font-weight: bold;">{{ value }}</td>
+  </tr>
 {% endmacro %}

@@ -1,0 +1,55 @@
+{% extends "base-email.grov" %}
+{% import "helpers.grov" as h %}
+
+{% block title %}Usage Alert — Grove Cloud{% endblock %}
+
+{% hoist target="preheader" %}You've used {{ usage_pct }}% of your {{ user.plan | title }} plan limits.{% endhoist %}
+
+{% block body %}
+  <p>Hi {{ user.name | default("there") }},</p>
+
+  {% if usage_pct >= 90 %}
+    {% set urgency = "critical" %}
+    <div style="background-color: #f8d7da; border: 1px solid #dc3545; border-radius: 6px; padding: 16px; margin: 0 0 16px;">
+      <strong style="color: #dc3545;">Critical:</strong> You're approaching your plan limit. Services may be restricted once you reach 100%.
+    </div>
+  {% elif usage_pct >= 75 %}
+    {% set urgency = "warning" %}
+    <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin: 0 0 16px;">
+      <strong style="color: #856404;">Heads up:</strong> You're using a significant portion of your plan allocation.
+    </div>
+  {% else %}
+    {% set urgency = "info" %}
+    <p>Here's a summary of your current usage:</p>
+  {% endif %}
+
+  {{ h.divider() }}
+  {{ h.heading("Usage Summary") }}
+
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
+    {{ h.info_row("Plan", user.plan | title) }}
+    {{ h.info_row("Current Usage", usage_current ~ " / " ~ usage_limit ~ " requests") }}
+    {{ h.info_row("Usage", usage_pct ~ "%") }}
+  </table>
+
+  {{ h.spacer(8) }}
+  {{ h.usage_bar(usage_pct) }}
+  {{ h.spacer(16) }}
+
+  {% capture cta_block %}
+    {% if urgency == "critical" %}
+      {{ h.button("Upgrade Now", "https://app.grovecloud.io/settings/billing", "#dc3545") }}
+    {% elif urgency == "warning" %}
+      {{ h.button("Review Usage", "https://app.grovecloud.io/usage") }}
+      {{ h.spacer(8) }}
+      {{ h.button("Upgrade Plan", "https://app.grovecloud.io/settings/billing", "#666666") }}
+    {% else %}
+      {{ h.button("View Details", "https://app.grovecloud.io/usage") }}
+    {% endif %}
+  {% endcapture %}
+
+  {{ cta_block | safe }}
+
+  {{ h.divider() }}
+  <p style="color: #666; font-size: 14px;">You're receiving this because usage alerts are enabled. <a href="https://app.grovecloud.io/settings/notifications" style="color: #2E6740;">Manage alert preferences</a>.</p>
+{% endblock %}

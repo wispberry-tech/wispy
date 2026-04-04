@@ -1,26 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Grove Cloud{% endblock %}</title>
   <style>
-    body { margin: 0; padding: 0; background: #F7F5F0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-    .wrapper { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .wrapper { width: 100%; background-color: #f4f4f7; padding: 24px 0; }
+    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; }
+    .header { background-color: #2E6740; padding: 24px; text-align: center; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
+    .body { padding: 32px 24px; color: #333333; line-height: 1.6; }
+    .body h2 { color: #2E6740; margin: 0 0 16px; }
+    .body p { margin: 0 0 16px; }
+    .footer { padding: 24px; text-align: center; color: #888888; font-size: 12px; background-color: #f9f9f9; }
+    .footer a { color: #2E6740; }
+    .preheader { display: none !important; max-height: 0; overflow: hidden; mso-hide: all; }
   </style>
 </head>
 <body>
-  {% block preheader %}{% endblock %}
+  <div class="preheader">{% block preheader %}{% endblock %}</div>
   <div class="wrapper">
-    <div style="background: #251917; padding: 24px; text-align: center;">
-      <span style="color: #2E6740; font-size: 24px; font-weight: bold;">Grove Store</span>
-    </div>
-    <div style="padding: 32px 24px;">
-      {% block body %}{% endblock %}
-    </div>
-    <div style="background: #F7F5F0; padding: 24px; text-align: center; color: #7A6B66; font-size: 12px;">
-      {% block footer %}
-        <p>&copy; 2026 Grove Store. You received this email because you have an account with us.</p>
-      {% endblock %}
+    <div class="container">
+      <div class="header">
+        <h1>Grove Cloud</h1>
+      </div>
+      <div class="body">
+        {% block body %}{% endblock %}
+      </div>
+      <div class="footer">
+        {% block footer %}
+          <p>&copy; {{ current_year }} Grove Cloud. All rights reserved.</p>
+          <p><a href="https://app.grovecloud.io/settings">Manage preferences</a> &middot; <a href="https://app.grovecloud.io/help">Help Center</a></p>
+        {% endblock %}
+      </div>
     </div>
   </div>
 </body>

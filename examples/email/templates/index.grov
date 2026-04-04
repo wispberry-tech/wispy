@@ -1,24 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Grove Email Renderer</title>
+  <title>Grove Cloud Email Templates</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
+    h1 { color: #2E6740; }
+    .template-list { list-style: none; padding: 0; }
+    .template-item { border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 12px 0; }
+    .template-item h3 { margin: 0 0 4px; }
+    .template-item p { margin: 0 0 8px; color: #666; }
+    .template-links { display: flex; gap: 12px; flex-wrap: wrap; }
+    .template-links a { color: #2E6740; font-weight: bold; text-decoration: none; }
+    .template-links a:hover { text-decoration: underline; }
+  </style>
 </head>
-<body style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F7F5F0; min-height: 100vh;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 2rem 1rem;">
-    <h1 style="color: #251917;">Grove Email Renderer</h1>
-    <p style="color: #7A6B66;">Preview HTML email templates stored in a FileSystemStore.</p>
-    <div style="display: grid; gap: 1rem; margin-top: 1.5rem;">
-      {% for link in links %}
-        <div style="background: #EEEBE3; border: 1px solid #D9D3CB; border-radius: 8px; padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-          <strong>{{ link.label }}</strong>
-          <div style="display: flex; gap: 0.75rem;">
-            <a href="/preview/{{ link.name }}" style="color: #2E6740; text-decoration: none; font-weight: 600;">Preview</a>
-            <a href="/source/{{ link.name }}" style="color: #251917; text-decoration: none; font-weight: 600;">Source</a>
-          </div>
+<body>
+  <h1>Grove Cloud Email Templates</h1>
+  <p>Preview transactional email templates with different users and scenarios.</p>
+
+  <ul class="template-list">
+    {% for tpl in templates %}
+      <li class="template-item">
+        <h3>{{ tpl.label }}</h3>
+        <p>{{ tpl.description }}</p>
+        <div class="template-links">
+          {% for user in users %}
+            <a href="/preview/{{ tpl.name }}?user={{ user.id }}">{{ user.name }} ({{ user.plan }})</a>
+          {% endfor %}
+          <a href="/source/{{ tpl.name }}">View Source</a>
         </div>
-      {% endfor %}
-    </div>
-  </div>
+      </li>
+    {% endfor %}
+  </ul>
 </body>
 </html>

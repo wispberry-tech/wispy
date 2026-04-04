@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Alice Johnson",
+    "email": "alice@example.com",
+    "plan": "pro",
+    "joined_date": "2025-11-15",
+    "usage_pct": 72,
+    "team_name": "Acme Corp"
+  },
+  {
+    "id": 2,
+    "name": "Bob Martinez",
+    "email": "bob@example.com",
+    "plan": "free",
+    "joined_date": "2026-03-28",
+    "usage_pct": 45,
+    "team_name": ""
+  },
+  {
+    "id": 3,
+    "name": "Chen Wei",
+    "email": "chen@example.com",
+    "plan": "enterprise",
+    "joined_date": "2025-06-01",
+    "usage_pct": 91,
+    "team_name": "GlobalTech Industries"
+  }
+]

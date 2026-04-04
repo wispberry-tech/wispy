@@ -1,29 +1,46 @@
 {% extends "base-email.grov" %}
 {% import "helpers.grov" as h %}
 
-{% block preheader %}
-  {% capture preheader_text %}Welcome aboard, {{ user.name }}! Here's how to get started.{% endcapture %}
-  {% hoist target="preheader" %}{{ preheader_text }}{% endhoist %}
-  <div style="display: none; max-height: 0; overflow: hidden;">
-    {{ preheader_text }}
-  </div>
-{% endblock %}
+{% block title %}Welcome to Grove Cloud{% endblock %}
+
+{% hoist target="preheader" %}Welcome aboard, {{ user.name | default("there") }}! Here's how to get started with Grove Cloud.{% endhoist %}
 
 {% block body %}
-  <h1 style="margin: 0 0 16px; color: #251917;">Welcome, {{ user.name }}!</h1>
-  <p style="color: #3D2E2A; line-height: 1.6;">
-    Thanks for joining Grove Store. We're excited to have you on board.
-  </p>
-
   {% capture greeting_block %}
-    <div style="background: #E8F0EA; border-radius: 8px; padding: 16px; margin: 16px 0;">
-      <strong>Your account:</strong> {{ user.email }}
-    </div>
+    <p style="font-size: 18px;">Hi {{ user.name | default("there") }},</p>
+    <p>Welcome to <strong>Grove Cloud</strong>! We're excited to have you on board.</p>
   {% endcapture %}
+
   {{ greeting_block | safe }}
 
   {{ h.divider() }}
-  <p style="color: #3D2E2A; line-height: 1.6;">Ready to start shopping? Check out our latest products:</p>
+
+  {{ h.heading("Get Started in 3 Steps") }}
+
+  <table cellpadding="0" cellspacing="0" border="0" width="100%">
+    {% let %}
+      steps = [
+        {"num": "1", "title": "Set up your workspace", "desc": "Create your first project and invite your team."},
+        {"num": "2", "title": "Connect your tools", "desc": "Integrate with GitHub, Slack, and your CI pipeline."},
+        {"num": "3", "title": "Deploy your first template", "desc": "Use our CLI or API to push templates to production."}
+      ]
+    {% endlet %}
+    {% for step in steps %}
+      <tr>
+        <td style="padding: 12px 0; vertical-align: top;">
+          <span style="display: inline-block; width: 32px; height: 32px; background-color: #2E6740; color: #fff; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; margin-right: 12px;">{{ step.num }}</span>
+        </td>
+        <td style="padding: 12px 0;">
+          <strong>{{ step.title }}</strong><br>
+          <span style="color: #666;">{{ step.desc }}</span>
+        </td>
+      </tr>
+    {% endfor %}
+  </table>
+
   {{ h.spacer(8) }}
-  {{ h.button("Browse Products", "https://example.com/products") }}
+  {{ h.button("Go to Dashboard", "https://app.grovecloud.io/dashboard") }}
+
+  {{ h.divider() }}
+  <p style="color: #666; font-size: 14px;">Questions? Reply to this email or visit our <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Help Center</a>.</p>
 {% endblock %}

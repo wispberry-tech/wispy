@@ -1,0 +1,42 @@
+{% extends "base-email.grov" %}
+{% import "helpers.grov" as h %}
+
+{% block title %}Plan Change Confirmation{% endblock %}
+
+{% hoist target="preheader" %}Your Grove Cloud plan has been changed from {{ old_plan | title }} to {{ new_plan | title }}.{% endhoist %}
+
+{% block body %}
+  <p>Hi {{ user.name | default("there") }},</p>
+
+  {% let %}
+    is_upgrade = (new_plan == "pro" and old_plan == "free") or (new_plan == "enterprise" and (old_plan == "free" or old_plan == "pro"))
+  {% endlet %}
+
+  {% if is_upgrade %}
+    <p>Great news! Your account has been <strong>upgraded</strong>.</p>
+  {% else %}
+    <p>Your plan has been <strong>changed</strong>. The new plan takes effect at the end of your current billing period.</p>
+  {% endif %}
+
+  {{ h.divider() }}
+  {{ h.heading("Plan Comparison") }}
+
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
+    {{ h.info_row("Previous Plan", old_plan | title) }}
+    {{ h.info_row("New Plan", new_plan | title) }}
+    {% if user.team_name %}
+      {{ h.info_row("Team", user.team_name) }}
+    {% endif %}
+  </table>
+
+  {{ h.spacer(16) }}
+
+  {% if is_upgrade %}
+    {{ h.button("Explore New Features", "https://app.grovecloud.io/dashboard") }}
+  {% else %}
+    {{ h.button("View Plan Details", "https://app.grovecloud.io/settings/billing", "#666666") }}
+  {% endif %}
+
+  {{ h.divider() }}
+  <p style="color: #666; font-size: 14px;">Questions about your plan? <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Contact support</a>.</p>
+{% endblock %}
