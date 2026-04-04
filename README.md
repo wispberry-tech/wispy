@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="branding/grove-full-logo@2x.png" alt="Grove" height="400">
+  <img src="branding/grove-full-logo.png" alt="Wispy Grove" width="400">
 </p>
 
 <p align="center">
