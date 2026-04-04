@@ -4,8 +4,8 @@
 {% block title %}{{ product.name }} — Grove Store{% endblock %}
 
 {% block content %}
-{% meta name="description" content=product.description | truncate(160) %}
-{% meta property="og:title" content=product.name %}
+{% meta name="description" content="Grove Store product" %}
+{% meta property="og:title" content="Grove Store" %}
 
 <nav class="breadcrumb">
   {% for crumb in breadcrumbs %}
