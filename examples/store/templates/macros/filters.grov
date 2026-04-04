@@ -1,0 +1,28 @@
+{% macro sort_dropdown(current_sort) %}
+<div class="sort-controls">
+  <label>Sort by:</label>
+  <select onchange="window.location.search = '?sort=' + this.value">
+    <option value="" {{ not current_sort ? "selected" : "" }}>Default</option>
+    <option value="price-asc" {{ current_sort == "price-asc" ? "selected" : "" }}>Price: Low to High</option>
+    <option value="price-desc" {{ current_sort == "price-desc" ? "selected" : "" }}>Price: High to Low</option>
+    <option value="rating" {{ current_sort == "rating" ? "selected" : "" }}>Top Rated</option>
+    <option value="name" {{ current_sort == "name" ? "selected" : "" }}>Name A-Z</option>
+  </select>
+</div>
+{% endmacro %}
+
+{% macro category_filter(categories, active_category) %}
+<div class="category-filter">
+  <h3>Categories</h3>
+  <ul class="filter-list">
+    <li><a href="/products" class="{{ not active_category ? "filter-active" : "" }}">All</a></li>
+    {% for cat in categories %}
+      <li>
+        <a href="/products?category={{ cat.slug }}" class="{{ active_category == cat.slug ? "filter-active" : "" }}">
+          {{ cat.name }}
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endmacro %}

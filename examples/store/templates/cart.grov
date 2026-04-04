@@ -1,12 +1,14 @@
 {% extends "base.grov" %}
 {% import "macros/pricing.grov" as pricing %}
 
-{% block title %}Cart — Grove Store{% endblock %}
+{% block title %}Cart &mdash; {{ site_name }}{% endblock %}
 
 {% block content %}
 {% meta name="description" content="Your shopping cart" %}
 
-<h1 style="margin: 0 0 1.5rem;">Shopping Cart</h1>
+{% include "components/breadcrumbs.grov" %}
+
+<h1>Shopping Cart</h1>
 
 {% if items | length > 0 %}
   <div class="table-wrap">
@@ -17,19 +19,17 @@
           <th>Price</th>
           <th>Qty</th>
           <th style="text-align: right;">Total</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
         {% for item in items %}
           <tr>
-            <td>
-              <a href="/product/{{ item.product.slug }}">{{ item.product.name }}</a>
-            </td>
-            <td>
-              {{ pricing.price(item.product.price, item.product.sale_price) }}
-            </td>
+            <td><a href="/product/{{ item.product.slug }}">{{ item.product.name }}</a></td>
+            <td>{{ pricing.price(item.product.price, item.product.sale_price) }}</td>
             <td>{{ item.quantity }}</td>
-            <td style="text-align: right;" class="font-bold">{{ item.line_total | currency }}</td>
+            <td style="text-align: right;">{{ item.line_total | currency }}</td>
+            <td><a href="/cart/remove?product={{ item.product.slug }}" class="remove-link">Remove</a></td>
           </tr>
         {% endfor %}
       </tbody>
@@ -46,22 +46,21 @@
   <div class="cart-summary">
     <div class="cart-row">
       <span>Subtotal</span>
-      <span class="font-bold">{{ subtotal | currency }}</span>
+      <span>{{ subtotal | currency }}</span>
     </div>
     <div class="cart-row text-muted">
       <span>Shipping</span>
       <span>{{ subtotal >= 5000 ? "Free" : "$4.99" }}</span>
     </div>
-    <hr class="cart-divider">
+    <hr>
     {% set total = subtotal >= 5000 ? subtotal : subtotal + 499 %}
-    <div class="cart-row" style="font-size: 1.2rem; font-weight: bold;">
+    <div class="cart-row cart-total">
       <span>Total</span>
       <span>{{ total | currency }}</span>
     </div>
-    <button class="btn" style="margin-top: 1rem; width: 100%;">Checkout</button>
   </div>
 {% else %}
-  <p class="text-muted">Your cart is empty.</p>
-  <a href="/" class="text-accent no-decor font-bold">Continue shopping →</a>
+  <p class="empty-state">Your cart is empty.</p>
+  <a href="/products" class="btn btn-primary">Continue Shopping</a>
 {% endif %}
 {% endblock %}

@@ -11,7 +11,24 @@
   {% set full = rating | floor %}
   {% set half = rating - full >= 0.5 ? 1 : 0 %}
   <span class="stars">
-    {% for i in range(1, full) %}★{% endfor %}{% if half %}½{% endif %}
+    {% for i in range(1, full) %}&#9733;{% endfor %}{% if half %}&#9734;{% endif %}
   </span>
-  <span class="review-count">({{ count }})</span>
+  <span class="review-count">({{ count }} {{ count == 1 ? "review" : "reviews" }})</span>
+{% endmacro %}
+
+{% macro discount_badge(price, sale_price) %}
+  {% if sale_price > 0 %}
+    {% let %}
+      pct = ((price - sale_price) * 100) / price
+    {% endlet %}
+    <span class="badge badge-sale">{{ pct | floor }}% off</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro stock_badge(in_stock) %}
+  {% if in_stock %}
+    <span class="badge badge-in-stock">In Stock</span>
+  {% else %}
+    <span class="badge badge-out-of-stock">Out of Stock</span>
+  {% endif %}
 {% endmacro %}

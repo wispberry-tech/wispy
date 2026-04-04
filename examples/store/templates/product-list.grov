@@ -1,0 +1,44 @@
+{% extends "base.grov" %}
+{% import "macros/pricing.grov" as pricing %}
+{% import "macros/filters.grov" as flt %}
+
+{% block title %}Products &mdash; {{ site_name }}{% endblock %}
+
+{% block content %}
+{% meta name="description" content="Browse our full product catalog" %}
+
+{% include "components/breadcrumbs.grov" %}
+
+<h1>Products</h1>
+<p class="result-count">{{ result_count }} {{ result_count == 1 ? "product" : "products" }}</p>
+
+<div class="product-page-layout">
+  <aside class="sidebar">
+    {{ flt.category_filter(categories, active_filters.category) }}
+  </aside>
+
+  <div class="product-content">
+    {{ flt.sort_dropdown(active_filters.sort) }}
+
+    <div class="product-grid">
+      {% for product in products %}
+        {% capture price_html %}
+          {{ pricing.price(product.price, product.sale_price) }}
+        {% endcapture %}
+        {% component "components/product-card.grov" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
+          {% fill "badge" %}
+            {% if product.on_sale %}
+              {{ pricing.discount_badge(product.price, product.sale_price) }}
+            {% endif %}
+            {% if not product.in_stock %}
+              {{ pricing.stock_badge(product.in_stock) }}
+            {% endif %}
+          {% endfill %}
+        {% endcomponent %}
+      {% empty %}
+        <p class="empty-state">No products match your filters.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,27 +1,43 @@
 {% extends "base.grov" %}
 {% import "macros/pricing.grov" as pricing %}
 
-{% block title %}Products — Grove Store{% endblock %}
+{% block title %}{{ site_name }} &mdash; Outdoor Gear for Every Adventure{% endblock %}
 
 {% block content %}
-{% meta name="description" content="Browse our product catalog" %}
+{% meta name="description" content="Shop outdoor gear for camping, hiking, cycling, running, and climbing." %}
 
-<h1 style="margin: 0 0 1.5rem;">Products</h1>
-<div class="product-grid">
-  {% for product in products %}
-    {% capture price_html %}
-      {{ pricing.price(product.price, product.sale_price) }}
-    {% endcapture %}
-    {% component "components/product-card.grov" name=product.name slug=product.slug image_url=product.image_url price_display=price_html %}
-      {% fill "badge" %}
-        {% if product.on_sale %}
-          <span class="badge badge-sale">Sale!</span>
-        {% endif %}
-        {% if not product.in_stock %}
-          <span class="badge badge-stock">Out of Stock</span>
-        {% endif %}
-      {% endfill %}
-    {% endcomponent %}
-  {% endfor %}
-</div>
+<section class="hero">
+  <h1>Gear Up for Your Next Adventure</h1>
+  <p>Quality outdoor equipment for every pursuit.</p>
+</section>
+
+<section class="section">
+  <h2>Featured Products</h2>
+  <div class="product-grid">
+    {% for product in featured %}
+      {% capture price_html %}
+        {{ pricing.price(product.price, product.sale_price) }}
+      {% endcapture %}
+      {% component "components/product-card.grov" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
+        {% fill "badge" %}
+          {% if product.on_sale %}
+            {{ pricing.discount_badge(product.price, product.sale_price) }}
+          {% endif %}
+        {% endfill %}
+      {% endcomponent %}
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <h2>Shop by Category</h2>
+  <div class="category-grid">
+    {% for cat in categories %}
+      <a href="/category/{{ cat.slug }}" class="category-card">
+        <h3>{{ cat.name }}</h3>
+        <p>{{ cat.description | truncate(80) }}</p>
+      </a>
+    {% endfor %}
+  </div>
+</section>
 {% endblock %}

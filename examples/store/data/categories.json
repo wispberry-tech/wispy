@@ -1,0 +1,7 @@
+[
+  {"name": "Camping", "slug": "camping", "description": "Tents, sleeping bags, and everything you need for a night under the stars."},
+  {"name": "Hiking", "slug": "hiking", "description": "Boots, packs, and gear for trails of every difficulty."},
+  {"name": "Cycling", "slug": "cycling", "description": "Bikes, helmets, lights, and accessories for road and trail."},
+  {"name": "Running", "slug": "running", "description": "Shoes, apparel, and tech for runners of all levels."},
+  {"name": "Climbing", "slug": "climbing", "description": "Harnesses, ropes, shoes, and protection for rock and ice."}
+]

@@ -1,64 +1,92 @@
 {% extends "base.grov" %}
 {% import "macros/pricing.grov" as pricing %}
 
-{% block title %}{{ product.name }} — Grove Store{% endblock %}
+{% block title %}{{ product.name }} &mdash; {{ site_name }}{% endblock %}
 
 {% block content %}
 {% meta name="description" content="Grove Store product" %}
 {% meta property="og:title" content="Grove Store" %}
 
-<nav class="breadcrumb">
-  {% for crumb in breadcrumbs %}
-    {% if crumb.href %}
-      <a href="{{ crumb.href }}">{{ crumb.label }}</a> /
-    {% else %}
-      {{ crumb.label }}
-    {% endif %}
-  {% endfor %}
-</nav>
+{% include "components/breadcrumbs.grov" %}
 
-<div class="panel" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-  <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width: 100%; border-radius: 8px;">
-  <div>
-    <h1 style="margin: 0 0 0.5rem;">{{ product.name }}</h1>
-    <div style="margin-bottom: 1rem;">
+<div class="product-detail">
+  <div class="product-image">
+    <img src="{{ product.image_url }}" alt="{{ product.name }}">
+  </div>
+  <div class="product-info">
+    <h1>{{ product.name }}</h1>
+
+    <div class="product-rating">
       {{ pricing.star_rating(product.rating, product.review_count) }}
     </div>
-    <div style="font-size: 1.5rem; margin-bottom: 1rem;">
+
+    <div class="product-price">
       {{ pricing.price(product.price, product.sale_price) }}
+      {{ pricing.discount_badge(product.price, product.sale_price) }}
     </div>
 
     {% if product.on_sale %}
       {% let %}
         savings = product.price - product.sale_price
       {% endlet %}
-      <p class="text-success font-bold">You save {{ savings | currency }}!</p>
+      <p class="savings">You save {{ savings | currency }}!</p>
     {% endif %}
 
-    <p class="text-muted" style="line-height: 1.6;">{{ product.description }}</p>
+    <p class="product-description">{{ product.description }}</p>
 
     {% if product.colors | length > 0 %}
-      <div style="margin: 1rem 0;">
-        <strong>Colors:</strong>
-        {% for color in product.colors %}
-          <span style="display: inline-block; padding: 0.2rem 0.6rem; border: 1px solid var(--color-border); border-radius: 4px; margin: 0.25rem; font-size: 0.85rem;">{{ color }}</span>
-        {% endfor %}
+      <div class="product-option">
+        <strong>Color:</strong>
+        <div class="option-list">
+          {% for color in product.colors %}
+            <span class="option-pill">{{ color }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if product.sizes | length > 0 %}
+      <div class="product-option">
+        <strong>Size:</strong>
+        <div class="option-list">
+          {% for size in product.sizes %}
+            <span class="option-pill">{{ size }}</span>
+          {% endfor %}
+        </div>
       </div>
     {% endif %}
 
     {% if product.in_stock %}
-      <div style="margin: 1rem 0;">
-        <label class="font-bold">Quantity:</label>
-        <select style="padding: 0.4rem; border-radius: 4px; border: 1px solid var(--color-border);">
+      <div class="product-actions">
+        <label>Qty:</label>
+        <select id="qty-select">
           {% for n in range(1, 10) %}
             <option value="{{ n }}">{{ n }}</option>
           {% endfor %}
         </select>
+        <a href="/cart/add?product={{ product.slug }}&qty=1" class="btn btn-primary">Add to Cart</a>
       </div>
-      <button class="btn">Add to Cart</button>
     {% else %}
-      <p class="text-error font-bold">Out of stock</p>
+      <p class="out-of-stock">Out of Stock</p>
     {% endif %}
   </div>
 </div>
+
+<div class="product-body">
+  {{ product.body | safe }}
+</div>
+
+{% if related | length > 0 %}
+  <section class="related-products">
+    <h2>Related Products</h2>
+    <div class="product-grid">
+      {% for rp in related %}
+        {% capture rp_price %}
+          {{ pricing.price(rp.price, rp.sale_price) }}
+        {% endcapture %}
+        {% component "components/product-card.grov" name=rp.name slug=rp.slug image_url=rp.image_url price_display=rp_price rating=rp.rating review_count=rp.review_count %}{% endcomponent %}
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
 {% endblock %}
