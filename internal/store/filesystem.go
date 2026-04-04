@@ -47,5 +47,25 @@ func (s *FileSystemStore) Load(name string) ([]byte, error) {
 		return nil, fmt.Errorf("template name %q escapes the store root", name)
 	}
 
-	return os.ReadFile(full)
+	// Step 1: try exact match
+	if data, err := os.ReadFile(full); err == nil {
+		return data, nil
+	}
+
+	// Steps 2 & 3 only apply when the name doesn't already have a .grov extension
+	if !strings.HasSuffix(clean, ".grov") {
+		// Step 2: try appending .grov
+		if data, err := os.ReadFile(full + ".grov"); err == nil {
+			return data, nil
+		}
+
+		// Step 3: try directory fallback — name/basename.grov
+		base := path.Base(clean)
+		dirFull := filepath.Join(full, base+".grov")
+		if data, err := os.ReadFile(dirFull); err == nil {
+			return data, nil
+		}
+	}
+
+	return nil, fmt.Errorf("template %q not found", name)
 }
