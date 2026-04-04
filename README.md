@@ -1,6 +1,10 @@
-# Grove
+<p align="center">
+  <img src="branding/grove-full-logo@2x.png" alt="Grove" height="80">
+</p>
 
-A bytecode-compiled template engine for Go with components, inheritance, and web primitives.
+<p align="center">
+  A bytecode-compiled template engine for Go with components, inheritance, and web primitives.
+</p>
 
 ## Install
 
