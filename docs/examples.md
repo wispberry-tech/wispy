@@ -13,15 +13,19 @@ examples/blog/
     base.grov                       # Root layout — nav, main, footer, asset placeholders
     index.grov                      # Homepage — extends base, lists posts
     post.grov                       # Post page — extends base, shows single post
-    components/
-      card.grov                     # Post card — props: title, summary, href, date; slot: tags
-      nav.grov                      # Navigation bar — props: site_name; default slot
-      footer.grov                   # Footer — props: year
-      tag.grov                      # Color tag badge — props: label, color
-      button.grov                   # Button link — props: label, href, variant
-      alert.grov                    # Alert box — props: type; default slot; uses let block
+    post-list.grov                  # Post list partial
+    author.grov                     # Author page
+    tag-list.grov                   # Tag list partial
+    composites/
+      card/card.grov               # Post card — props: title, summary, href, date; slot: tags
+      nav/nav.grov                 # Navigation bar — props: site_name
+      author-card/author-card.grov # Author card component
+      breadcrumbs/breadcrumbs.grov # Breadcrumb navigation
+    primitives/
+      footer/footer.grov           # Footer — props: year
+      tag-badge/tag-badge.grov     # Color tag badge — props: label, color
+      button/button.grov           # Button link — props: label, href, variant
     pages/
-      styleguide.grov              # Component showcase page
 ```
 
 ### The Go Application
@@ -85,15 +89,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>{% block title %}Blog{% endblock %}</title>
+  <title>{% block title %}Grove Blog{% endblock %}</title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
   <!-- HEAD_HOISTED -->
 </head>
 <body>
-  {% component "components/nav.html" site_name=site_name %}{% endcomponent %}
-  <main>{% block content %}{% endblock %}</main>
-  {% component "components/footer.html" year=current_year %}{% endcomponent %}
+  {% component "composites/nav" site_name=site_name %}{% endcomponent %}
+  <main class="container">{% block content %}{% endblock %}</main>
+  {% component "primitives/footer" year=current_year %}{% endcomponent %}
   <!-- FOOT_ASSETS -->
 </body>
 </html>
@@ -106,17 +110,17 @@ Every page inherits this layout. The base template declares a global stylesheet 
 `index.grov` extends the base and iterates over posts using the card component:
 
 ```jinja2
-{% extends "base.html" %}
-{% block title %}Home — Blog{% endblock %}
+{% extends "base.grov" %}
+{% block title %}Home — Grove Blog{% endblock %}
 
 {% block content %}
-{% meta name="description" content="A blog built with Grove" %}
+{% meta name="description" content="A tech blog built with the Grove template engine" %}
 
 {% for post in posts %}
-  {% component "components/card.html" title=post.title summary=post.summary href="/post/" ~ post.slug date=post.date %}
+  {% component "composites/card" title=post.title summary=post.summary href="/post/" ~ post.slug date=post.date %}
     {% fill "tags" %}
       {% for tag in post.tags %}
-        {% component "components/tag.html" label=tag.name color=tag.color %}{% endcomponent %}
+        {% component "primitives/tag-badge" label=tag.name color=tag.color %}{% endcomponent %}
       {% endfor %}
     {% endfill %}
   {% endcomponent %}

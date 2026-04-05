@@ -109,7 +109,7 @@ A typical web application renders a template and then injects collected assets a
 
 ```go
 func handler(w http.ResponseWriter, r *http.Request) {
-    result, err := eng.Render(r.Context(), "page.html", grove.Data{
+    result, err := eng.Render(r.Context(), "page.grov", grove.Data{
         "title": "My Page",
     })
     if err != nil {

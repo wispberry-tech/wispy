@@ -3,13 +3,13 @@
 ## Installation
 
 ```bash
-go get grove
+go get github.com/wispberry-tech/grove
 ```
 
 Import the package:
 
 ```go
-import "grove/pkg/grove"
+import "github.com/wispberry-tech/grove/pkg/grove"
 ```
 
 ## Rendering an Inline Template
@@ -22,7 +22,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
 func main() {
@@ -58,7 +58,7 @@ eng := grove.New(grove.WithStore(store))
 
 result, err := eng.Render(
 	context.Background(),
-	"index.html",    // loads ./templates/index.html
+	"index.grov",    // loads ./templates/index.grov
 	grove.Data{"title": "Home"},
 )
 ```
@@ -73,12 +73,12 @@ For testing or dynamic templates, use `MemoryStore`:
 
 ```go
 store := grove.NewMemoryStore()
-store.Set("greeting.html", `Hello, {{ name }}!`)
-store.Set("base.html", `<html>{% block content %}{% endblock %}</html>`)
+store.Set("greeting.grov", `Hello, {{ name }}!`)
+store.Set("base.grov", `<html>{% block content %}{% endblock %}</html>`)
 
 eng := grove.New(grove.WithStore(store))
 
-result, _ := eng.Render(ctx, "greeting.html", grove.Data{"name": "Bob"})
+result, _ := eng.Render(ctx, "greeting.grov", grove.Data{"name": "Bob"})
 fmt.Println(result.Body) // Hello, Bob!
 ```
 
@@ -190,7 +190,7 @@ if err != nil {
 **`RuntimeError`** — errors during template execution (division by zero, missing required props, strict mode undefined variables):
 
 ```go
-result, err := eng.Render(ctx, "page.html", data)
+result, err := eng.Render(ctx, "page.grov", data)
 if err != nil {
 	var re grove.RuntimeError
 	if errors.As(err, &re) {

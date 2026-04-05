@@ -7,7 +7,7 @@ Template inheritance lets you define a base layout and override specific section
 A base template defines the page structure with `{% block %}` override points:
 
 ```jinja2
-{# base.html #}
+{# base.grov #}
 <!DOCTYPE html>
 <html>
 <head>
@@ -32,8 +32,8 @@ Blocks can have default content (like `title` and `footer` above) or be empty (l
 A child template extends a parent with `{% extends %}` and overrides specific blocks:
 
 ```jinja2
-{# home.html #}
-{% extends "base.html" %}
+{# home.grov #}
+{% extends "base.grov" %}
 
 {% block title %}Home — My Site{% endblock %}
 
@@ -54,8 +54,8 @@ A child template extends a parent with `{% extends %}` and overrides specific bl
 Include the parent block's content using `{{ super() }}`:
 
 ```jinja2
-{# home.html #}
-{% extends "base.html" %}
+{# home.grov #}
+{% extends "base.grov" %}
 
 {% block title %}Home — {{ super() }}{% endblock %}
 ```
@@ -67,7 +67,7 @@ If the base template's `title` block contains `My Site`, this renders: `Home —
 Inheritance chains to any depth. Each level can override blocks and call `super()`:
 
 ```jinja2
-{# base.html #}
+{# base.grov #}
 <html>
 <body>
   {% block content %}base{% endblock %}
@@ -76,8 +76,8 @@ Inheritance chains to any depth. Each level can override blocks and call `super(
 ```
 
 ```jinja2
-{# section.html #}
-{% extends "base.html" %}
+{# section.grov #}
+{% extends "base.grov" %}
 
 {% block content %}
   <div class="section">
@@ -87,13 +87,13 @@ Inheritance chains to any depth. Each level can override blocks and call `super(
 ```
 
 ```jinja2
-{# page.html #}
-{% extends "section.html" %}
+{# page.grov #}
+{% extends "section.grov" %}
 
 {% block inner %}page content{% endblock %}
 ```
 
-Rendering `page.html` produces:
+Rendering `page.grov` produces:
 
 ```html
 <html>
@@ -110,16 +110,16 @@ Rendering `page.html` produces:
 Each `super()` call reaches one level up. In a three-level chain:
 
 ```jinja2
-{# base.html #}
+{# base.grov #}
 {% block title %}Base{% endblock %}
 
-{# mid.html #}
-{% extends "base.html" %}
+{# mid.grov #}
+{% extends "base.grov" %}
 {% block title %}Mid:{{ super() }}{% endblock %}
 
-{# leaf.html #}
-{% extends "mid.html" %}
+{# leaf.grov #}
+{% extends "mid.grov" %}
 {% block title %}Leaf:{{ super() }}{% endblock %}
 ```
 
-Rendering `leaf.html` produces: `Leaf:Mid:Base`.
+Rendering `leaf.grov` produces: `Leaf:Mid:Base`.

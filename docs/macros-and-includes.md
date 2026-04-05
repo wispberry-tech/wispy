@@ -5,13 +5,13 @@
 Include a template inline. The included template shares the current scope:
 
 ```jinja2
-{% include "partials/nav.html" %}
+{% include "partials/nav.grov" %}
 ```
 
 Pass additional variables:
 
 ```jinja2
-{% include "partials/nav.html" section="about" active=true %}
+{% include "partials/nav.grov" section="about" active=true %}
 ```
 
 The included template sees all variables from the current scope plus the explicitly passed ones.
@@ -21,7 +21,7 @@ The included template sees all variables from the current scope plus the explici
 Like `include`, but with an isolated scope — only explicitly passed variables are visible:
 
 ```jinja2
-{% render "partials/card.html" title="Widget" price=9.99 %}
+{% render "partials/card.grov" title="Widget" price=9.99 %}
 ```
 
 The rendered template cannot access the caller's variables. Use `render` when you want self-contained fragments that don't depend on page context.
@@ -95,7 +95,7 @@ Inside the macro, `{{ caller() }}` renders the content from the `{% call %}` blo
 Import macros from another template file into a namespace:
 
 ```jinja2
-{% import "macros/ui.html" as ui %}
+{% import "macros/ui.grov" as ui %}
 
 {{ ui.user_card("Alice") }}
 {{ ui.link("https://example.com", "Click here") }}

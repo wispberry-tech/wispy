@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Grove is a bytecode-compiled template engine for Go. Templates (`.grov` files) are lexed, parsed into an AST, compiled to bytecode, and executed on a stack-based VM. The Go module is `grove` (Go 1.24). The only external dependency is `testify` (test-only).
+Grove is a bytecode-compiled template engine for Go. Templates (`.grov` files) are lexed, parsed into an AST, compiled to bytecode, and executed on a stack-based VM. The Go module is `github.com/wispberry-tech/grove` (Go 1.24). The only external dependency is `testify` (test-only).
 
 ## Commands
 

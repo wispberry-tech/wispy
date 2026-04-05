@@ -107,7 +107,7 @@ No IDs, no class-name coupling — `data-*` attributes are the contract between 
 ## Using a Component
 
 ```jinja2
-{% component "components/card.html" title="Hello" summary="A card" %}
+{% component "components/card.grov" title="Hello" summary="A card" %}
   <p>This goes into the default slot.</p>
 {% endcomponent %}
 ```
@@ -121,7 +121,7 @@ The first argument is the template path (loaded from the store). Remaining argum
 Declare accepted props at the top of a component template with `{% props %}`:
 
 ```jinja2
-{# components/button.html #}
+{# components/button.grov #}
 {% props label, href="/", variant="primary" %}
 
 <a href="{{ href }}" class="btn btn-{{ variant }}">{{ label }}</a>
@@ -137,7 +137,7 @@ Declare accepted props at the top of a component template with `{% props %}`:
 Content between `{% component %}` and `{% endcomponent %}` fills the default slot:
 
 ```jinja2
-{# components/box.html #}
+{# components/box.grov #}
 <div class="box">
   {% slot %}No content provided{% endslot %}
 </div>
@@ -145,7 +145,7 @@ Content between `{% component %}` and `{% endcomponent %}` fills the default slo
 
 ```jinja2
 {# Using it: #}
-{% component "components/box.html" %}
+{% component "components/box.grov" %}
   <p>This replaces "No content provided"</p>
 {% endcomponent %}
 ```
@@ -157,7 +157,7 @@ The text inside `{% slot %}...{% endslot %}` is fallback content, rendered when 
 Components can define multiple injection points with named slots:
 
 ```jinja2
-{# components/card.html #}
+{# components/card.grov #}
 {% props title, summary %}
 
 <article>
@@ -175,7 +175,7 @@ Components can define multiple injection points with named slots:
 Callers fill named slots with `{% fill %}`:
 
 ```jinja2
-{% component "components/card.html" title="My Post" summary="A summary" %}
+{% component "components/card.grov" title="My Post" summary="A summary" %}
   {% fill "tags" %}
     <span class="tag">Go</span>
     <span class="tag">Templates</span>
@@ -197,8 +197,8 @@ This is the key design decision in Grove's component system:
 - **Fills see the caller's scope**, not the component's. This means you can use your page data inside a `{% fill %}` block without threading it through props.
 
 ```jinja2
-{# page.html — caller's scope has "posts" #}
-{% component "components/card.html" title="Recent" summary="Latest posts" %}
+{# page.grov — caller's scope has "posts" #}
+{% component "components/card.grov" title="Recent" summary="Latest posts" %}
   {% fill "tags" %}
     {# This sees "posts" from the page, not from the card component #}
     {% for post in posts %}
@@ -213,13 +213,13 @@ This is the key design decision in Grove's component system:
 Components can use other components:
 
 ```jinja2
-{# components/post-list.html #}
+{# components/post-list.grov #}
 {% props posts %}
 {% for post in posts %}
-  {% component "components/card.html" title=post.title summary=post.summary %}
+  {% component "components/card.grov" title=post.title summary=post.summary %}
     {% fill "tags" %}
       {% for tag in post.tags %}
-        {% component "components/tag.html" label=tag.name color=tag.color %}{% endcomponent %}
+        {% component "components/tag.grov" label=tag.name color=tag.color %}{% endcomponent %}
       {% endfor %}
     {% endfill %}
   {% endcomponent %}

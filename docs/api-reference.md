@@ -3,7 +3,7 @@
 Import:
 
 ```go
-import "grove/pkg/grove"
+import "github.com/wispberry-tech/grove/pkg/grove"
 ```
 
 ## Engine
@@ -162,8 +162,8 @@ Adds or updates a template.
 
 ```go
 store := grove.NewMemoryStore()
-store.Set("base.html", `<html>{% block content %}{% endblock %}</html>`)
-store.Set("page.html", `{% extends "base.html" %}{% block content %}Hello{% endblock %}`)
+store.Set("base.grov", `<html>{% block content %}{% endblock %}</html>`)
+store.Set("page.grov", `{% extends "base.grov" %}{% block content %}Hello{% endblock %}`)
 ```
 
 ### FileSystemStore
@@ -178,8 +178,8 @@ Creates a store that loads templates from disk. Template names are forward-slash
 store := grove.NewFileSystemStore("./templates")
 eng := grove.New(grove.WithStore(store))
 
-// Loads ./templates/pages/home.html
-result, err := eng.Render(ctx, "pages/home.html", data)
+// Loads ./templates/pages/home.grov
+result, err := eng.Render(ctx, "pages/home.grov", data)
 ```
 
 **Security:** Rejects absolute paths and `..` traversal. Paths are cleaned and verified to stay within the root directory.

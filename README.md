@@ -9,7 +9,7 @@
 ## Install
 
 ```bash
-go get grove
+go get github.com/wispberry-tech/grove
 ```
 
 ## Quick Example
@@ -20,7 +20,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
 func main() {
@@ -42,7 +42,7 @@ func main() {
 Grove templates mix HTML with expressions, control flow, and components:
 
 ```jinja2
-{% extends "base.html" %}
+{% extends "base.grov" %}
 
 {% block content %}
 {% asset "/static/page.css" type="stylesheet" %}
@@ -51,7 +51,7 @@ Grove templates mix HTML with expressions, control flow, and components:
 <h1>{{ title | upper }}</h1>
 
 {% for post in posts %}
-  {% component "components/card.html" title=post.title date=post.date %}
+  {% component "composites/card" title=post.title date=post.date %}
     {% fill "tags" %}
       {% for tag in post.tags %}
         <span class="{{ tag.draft ? "muted" : "active" }}">{{ tag.name }}</span>
