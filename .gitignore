@@ -41,3 +41,4 @@ go.work.sum
 .claude/
 .superpowers/
 .worktrees/
+micro-lang/
