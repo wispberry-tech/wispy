@@ -123,20 +123,6 @@ func (l *lx) lexText() {
 	}
 }
 
-// ─── Output {{ }} ─────────────────────────────────────────────────────────────
-
-func (l *lx) lexOutput() error {
-	line, col := l.line, l.col
-	l.pos += 2
-	l.col += 2
-	stripLeft := l.consumeIf('-')
-	if stripLeft {
-		l.stripLastTextRight()
-	}
-	l.tokens = append(l.tokens, Token{Kind: TK_OUTPUT_START, Value: "{{", Line: line, Col: col, StripLeft: stripLeft})
-	return l.lexInner("}}")
-}
-
 // ─── Tag {% %} — with special handling for {% raw %} ─────────────────────────
 
 func (l *lx) lexTag() error {
@@ -508,10 +494,7 @@ func (l *lx) lexInner(close string) error {
 			l.col++
 		}
 		if l.hasPrefix(close) {
-			kind := TK_OUTPUT_END
-			if close == "%}" {
-				kind = TK_TAG_END
-			}
+			kind := TK_TAG_END
 			l.tokens = append(l.tokens, Token{Kind: kind, Value: close, Line: l.line, Col: l.col, StripRight: stripRight})
 			l.pos += 2
 			l.col += 2

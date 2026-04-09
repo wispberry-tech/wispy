@@ -6,9 +6,6 @@ import "github.com/wispberry-tech/grove/internal/vm"
 // Value is the template runtime value type.
 type Value = vm.Value
 
-// Nil is the zero Value (nil type).
-var Nil = vm.Nil
-
 // StringValue wraps a Go string as a Value.
 func StringValue(s string) Value { return vm.StringVal(s) }
 

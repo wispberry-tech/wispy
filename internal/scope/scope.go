@@ -13,19 +13,6 @@ func New(parent *Scope) *Scope {
 	return &Scope{vars: make(map[string]any), parent: parent}
 }
 
-// NewWithSize creates a scope with a pre-sized variable map.
-func NewWithSize(parent *Scope, size int) *Scope {
-	return &Scope{vars: make(map[string]any, size), parent: parent}
-}
-
-// Reset clears all variables and sets a new parent, reusing the map memory.
-func (s *Scope) Reset(parent *Scope) {
-	for k := range s.vars {
-		delete(s.vars, k)
-	}
-	s.parent = parent
-}
-
 // Set stores key=value in this scope frame.
 func (s *Scope) Set(key string, value any) {
 	s.vars[key] = value
@@ -39,16 +26,6 @@ func (s *Scope) Get(key string) (any, bool) {
 		}
 	}
 	return nil, false
-}
-
-// SetParent sets the parent scope (used during scope setup in Execute).
-func (s *Scope) SetParent(p *Scope) {
-	s.parent = p
-}
-
-// Parent returns the parent scope, or nil if this is the root scope.
-func (s *Scope) Parent() *Scope {
-	return s.parent
 }
 
 // ForEach calls fn for each key/value pair in this scope's own bindings (not parent).

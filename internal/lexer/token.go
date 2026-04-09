@@ -7,8 +7,6 @@ type TokenKind uint8
 const (
 	TK_EOF          TokenKind = iota
 	TK_TEXT                   // raw text between delimiters
-	TK_OUTPUT_START           // {{ or {{-
-	TK_OUTPUT_END             // }} or -}}
 	TK_TAG_START              // {% or {%-
 	TK_TAG_END                // %} or -%}
 	// Literals
