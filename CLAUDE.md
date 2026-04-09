@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Memory Important!
+- always ask questions in an interactive way, never assume you understand the code without asking questions
+- ask for clarifications about the code, the project, the architecture, and the testing strategy
+
 ## Project
 
 Grove is a bytecode-compiled template engine for Go. Templates (`.grov` files) are lexed, parsed into an AST, compiled to bytecode, and executed on a stack-based VM. The Go module is `github.com/wispberry-tech/grove` (Go 1.24). The only external dependency is `testify` (test-only).
@@ -49,7 +53,7 @@ No Makefile, linter config, or CI pipeline exists. Use `gofmt` for formatting.
 
 ## Template features
 
-Variables, filters (pipe syntax), arithmetic/comparison/logical expressions (including ternary `? :`), `if`/`elif`/`else`, `for`/`empty`, `range`, `set`, `let` (multi-variable assignment block), `capture`, list/map literals, macros (`macro`/`call`), includes (`include`/`render`/`import`), layout inheritance (`extends`/`block`/`super()`), components with slots (`component`/`slot`/`fill`), and web primitives (`asset`/`meta`/`hoist`).
+Variables, filters (pipe syntax), arithmetic/comparison/logical expressions (including ternary `? :`), `{% #if %}` / `{% :else if %}` / `{% :else %}` / `{% /if %}` conditionals, `{% #each items as item %}` / `{% :empty %}` / `{% /each %}` loops, `{% set %}` single-variable assignment, `{% #let %}...{% /let %}` block-scoped multi-variable assignment, `{% #capture varname %}...{% /capture %}` output capture, list/map literals, `{% import Name from "path" %}` component imports, `<Component>` definitions with `{% slot %}` / `{% #slot %}` / `{% #fill %}` composition, and web primitives (`{% asset %}` / `{% meta %}` / `{% #hoist %}` / `{% #verbatim %}`).
 
 ## Testing
 

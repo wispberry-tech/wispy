@@ -6,8 +6,11 @@ Grove uses a single delimiter pair for expressions and two types of elements:
 
 | Syntax | Purpose | Example |
 |--------|---------|---------|
-| `{% %}` | Expression output / tags | `{% name %}`, `{% set x = 1 %}` |
-| `<PascalCase>` | Control flow & composition elements | `<If>`, `<For>`, `<Component>` |
+| `{% %}` | Expression output and inline tags | `{% name %}`, `{% set x = 1 %}`, `{% slot "x" %}` |
+| `{% #keyword %}` | Block tag open | `{% #if cond %}`, `{% #each items as item %}` |
+| `{% :keyword %}` | Block branch | `{% :else %}`, `{% :else if cond %}`, `{% :empty %}` |
+| `{% /keyword %}` | Block tag close | `{% /if %}`, `{% /each %}` |
+| `<PascalCase>` | Component invocations only | `<Card>`, `<Button>`, `<Base>` |
 | `{# #}` | Comments (not rendered) | `{# TODO: fix this #}` |
 
 ### Whitespace control
@@ -119,7 +122,7 @@ Trailing commas are allowed: `["a", "b",]`.
 {% nested.card.padding %} {# 1rem #}
 ```
 
-Keys are unquoted identifiers. Trailing commas are allowed. Maps preserve insertion order — iterating with `<For>` or using `keys`/`values` filters returns entries in declaration order.
+Keys are unquoted identifiers. Trailing commas are allowed. Maps preserve insertion order — iterating with `{% #each %}` or using `keys`/`values` filters returns entries in declaration order.
 
 Maps and lists nest freely:
 
@@ -148,59 +151,59 @@ See [Filters](filters.md) for the complete catalog of 42 built-in filters.
 
 ## Control Flow
 
-### If / ElseIf / Else
+### If / else if / else
 
 ```html
-<If test={user.admin}>
+{% #if user.admin %}
   <span class="badge">Admin</span>
-<ElseIf test={user.role == "editor"} />
+{% :else if user.role == "editor" %}
   <span class="badge">Editor</span>
-<Else />
+{% :else %}
   <span class="badge">Member</span>
-</If>
+{% /if %}
 ```
 
 **Truthy/falsy rules:** `nil`, `false`, `0`, `""` (empty string), empty lists `[]`, and empty maps `{}` are falsy. Everything else is truthy.
 
-### For loops
+### Each loops
 
 Iterate over lists:
 
 ```html
-<For each={items} as="item">
+{% #each items as item %}
   <li>{% item %}</li>
-</For>
+{% /each %}
 ```
 
-With an `<Empty />` fallback for empty collections:
+With a `{% :empty %}` fallback for empty collections:
 
 ```html
-<For each={posts} as="post">
+{% #each posts as post %}
   <article>{% post.title %}</article>
-<Empty />
+{% :empty %}
   <p>No posts yet.</p>
-</For>
+{% /each %}
 ```
 
 Iterate with index (two-variable form):
 
 ```html
-<For each={items} as="item" key="i">
+{% #each items as item, i %}
   <li>{% i %}: {% item %}</li>
-</For>
+{% /each %}
 ```
 
-Iterate over maps (keys are sorted lexicographically):
+Iterate over maps:
 
 ```html
-<For each={config} as="value" key="key">
+{% #each config as value, key %}
   {% key %}: {% value %}
-</For>
+{% /each %}
 ```
 
 #### Loop variables
 
-Inside every `<For>` loop, a `loop` variable is automatically available:
+Inside every `{% #each %}` loop, a `loop` variable is automatically available:
 
 | Variable | Description |
 |----------|-------------|
@@ -213,21 +216,21 @@ Inside every `<For>` loop, a `loop` variable is automatically available:
 | `loop.parent` | Reference to the enclosing loop's `loop` variable |
 
 ```html
-<For each={items} as="item">
+{% #each items as item %}
   {% loop.index %}/{% loop.length %}: {% item %}
-  <If test={loop.first}>(first)</If>
-  <If test={loop.last}>(last)</If>
-</For>
+  {% #if loop.first %}(first){% /if %}
+  {% #if loop.last %}(last){% /if %}
+{% /each %}
 ```
 
 Nested loop example:
 
 ```html
-<For each={rows} as="row">
-  <For each={row} as="cell">
+{% #each rows as row %}
+  {% #each row as cell %}
     [{% loop.parent.index %},{% loop.index %}] = {% cell %}
-  </For>
-</For>
+  {% /each %}
+{% /each %}
 ```
 
 ### range
@@ -235,13 +238,13 @@ Nested loop example:
 Generate numeric sequences:
 
 ```html
-<For each={range(5)} as="i">{% i %}</For>
+{% #each range(5) as i %}{% i %}{% /each %}
 {# 0 1 2 3 4 #}
 
-<For each={range(1, 4)} as="i">{% i %}</For>
+{% #each range(1, 4) as i %}{% i %}{% /each %}
 {# 1 2 3 #}
 
-<For each={range(10, 0, -2)} as="i">{% i %}</For>
+{% #each range(10, 0, -2) as i %}{% i %}{% /each %}
 {# 10 8 6 4 2 #}
 ```
 
@@ -258,14 +261,14 @@ Assign a single variable:
 {% greeting %}
 ```
 
-Variables set inside a `<For>` loop persist after the loop ends.
+Variables set inside a `{% #each %}` loop persist after the loop ends.
 
 ### let
 
-Assign multiple variables with optional conditionals:
+Assign multiple variables within a scoped block:
 
 ```html
-{% let %}
+{% #let %}
   bg = "#d1ecf1"
   fg = "#0c5460"
   icon = "i"
@@ -279,7 +282,7 @@ Assign multiple variables with optional conditionals:
     fg = "#721c24"
     icon = "x"
   end
-{% endlet %}
+{% /let %}
 
 <div style="background: {% bg %}; color: {% fg %}">
   {% icon %} {% message %}
@@ -293,18 +296,18 @@ Assign multiple variables with optional conditionals:
 - Expressions support the full syntax: filters, math, ternary, map/list literals
 - Multi-line expressions work (e.g., a map literal spanning multiple lines) — the parser looks for `name =` to detect the next assignment
 - Blank lines are ignored
-- All variables are written to the outer scope (available after `{% endlet %}`)
+- All variables are written to the outer scope (available after `{% /let %}`)
 - No output is produced inside the block
 
 ```html
-{% let %}
+{% #let %}
   themes = {
     warning: {bg: "#fff3cd", fg: "#856404"},
     error: {bg: "#f8d7da", fg: "#721c24"},
     info: {bg: "#d1ecf1", fg: "#0c5460"}
   }
   t = themes[type] | default(themes.info)
-{% endlet %}
+{% /let %}
 ```
 
 ### Capture
@@ -312,9 +315,9 @@ Assign multiple variables with optional conditionals:
 Render a block into a variable instead of outputting it:
 
 ```html
-<Capture name="greeting">
+{% #capture greeting %}
   Hello, {% name | title %}!
-</Capture>
+{% /capture %}
 
 {% greeting | trim %}
 ```
@@ -337,8 +340,8 @@ The captured content is a string. You can filter or manipulate it after capture.
 Output template delimiters literally without parsing:
 
 ```html
-<Verbatim>
+{% #verbatim %}
   {% this is not parsed %}
-  <If> neither is this </If>
-</Verbatim>
+  {# neither is this #}
+{% /verbatim %}
 ```

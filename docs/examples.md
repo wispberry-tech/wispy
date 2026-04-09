@@ -8,23 +8,20 @@ The `examples/blog/` directory contains a complete web application demonstrating
 
 ```
 examples/blog/
-  main.go                           # Go web app
+  main.go                                        # Go web app
   templates/
-    base.html                       # Root layout component — nav, main, footer, asset placeholders
-    index.html                      # Homepage — imports base, lists posts
-    post.html                       # Post page — imports base, shows single post
-    post-list.html                  # Post list component
-    author.html                     # Author page
-    tag-list.html                   # Tag list component
+    base.grov                                    # Root layout component — nav, main, footer, asset placeholders
+    index.grov                                   # Homepage — imports base, lists posts
+    post.grov                                    # Post page — imports base, shows single post
     composites/
-      card/card.html               # Post card — props: title, summary, href, date; slot: tags
-      nav/nav.html                 # Navigation bar — props: site_name
-      author-card/author-card.html # Author card component
-      breadcrumbs/breadcrumbs.html # Breadcrumb navigation
+      card/card.grov                             # Post card — props: title, summary, href, date; slot: tags
+      nav/nav.grov                               # Navigation bar — props: site_name
+      author-card/author-card.grov               # Author card component
+      breadcrumbs/breadcrumbs.grov               # Breadcrumb navigation
     primitives/
-      footer/footer.html           # Footer — props: year
-      tag-badge/tag-badge.html     # Color tag badge — props: label, color
-      button/button.html           # Button link — props: label, href, variant
+      footer/footer.grov                         # Footer — props: year
+      tag-badge/tag-badge.grov                   # Color tag badge — props: label, color
+      button/button.grov                         # Button link — props: label, href, variant
 ```
 
 ### The Go Application
@@ -67,7 +64,7 @@ Handlers render templates and assemble the response by replacing placeholder com
 
 ```go
 func handler(w http.ResponseWriter, r *http.Request) {
-    result, _ := eng.Render(r.Context(), "index.html", grove.Data{
+    result, _ := eng.Render(r.Context(), "index.grov", grove.Data{
         "posts": postsAny,
     })
 
@@ -81,24 +78,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 ### Base Layout
 
-`base.html` defines the HTML skeleton as a component with named slots:
+`base.grov` defines the HTML skeleton as a component with named slots:
 
 ```html
 <Component name="Base">
-  <ImportAsset src="/static/style.css" type="stylesheet" priority="10" />
+  {% asset "/static/style.css" type="stylesheet" priority="10" %}
   <!DOCTYPE html>
   <html lang="en">
   <head>
-    <title><Slot name="title">Grove Blog</Slot></title>
+    <title>{% #slot "title" %}Grove Blog{% /slot %}</title>
     <!-- HEAD_ASSETS -->
     <!-- HEAD_META -->
     <!-- HEAD_HOISTED -->
   </head>
   <body>
-    <Import src="composites/nav" name="Nav" />
+    {% import Nav from "composites/nav" %}
     <Nav site_name={site_name} />
-    <main class="container"><Slot name="content" /></main>
-    <Import src="primitives/footer" name="Footer" />
+    <main class="container">{% slot "content" %}</main>
+    {% import Footer from "primitives/footer" %}
     <Footer year={current_year} />
     <!-- FOOT_ASSETS -->
   </body>
@@ -110,28 +107,28 @@ Every page imports this layout. The base component declares a global stylesheet 
 
 ### Page Templates
 
-`index.html` imports the base layout and iterates over posts using the card component:
+`index.grov` imports the base layout and iterates over posts using the card component:
 
 ```html
-<Import src="base" name="Base" />
-<Import src="composites/card" name="Card" />
-<Import src="primitives/tag-badge" name="TagBadge" />
+{% import Base from "base" %}
+{% import Card from "composites/card" %}
+{% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  <Fill slot="title">Home — Grove Blog</Fill>
-  <Fill slot="content">
-    <SetMeta name="description" content="A tech blog built with the Grove template engine" />
+  {% #fill "title" %}Home — Grove Blog{% /fill %}
+  {% #fill "content" %}
+    {% meta name="description" content="A tech blog built with the Grove template engine" %}
 
-    <For each={posts} as="post">
+    {% #each posts as post %}
       <Card title={post.title} summary={post.summary} href={"/post/" ~ post.slug} date={post.date}>
-        <Fill slot="tags">
-          <For each={post.tags} as="tag">
+        {% #fill "tags" %}
+          {% #each post.tags as tag %}
             <TagBadge label={tag.name} color={tag.color} />
-          </For>
-        </Fill>
+          {% /each %}
+        {% /fill %}
       </Card>
-    </For>
-  </Fill>
+    {% /each %}
+  {% /fill %}
 </Base>
 ```
 
@@ -139,24 +136,24 @@ This demonstrates nested components (tag inside card), slot fills, expression co
 
 ### Components
 
-**card.html** — shows props with defaults and a named slot:
+**card.grov** — shows props with defaults and a named slot:
 
 ```html
 <Component name="Card" title summary href="#" date="">
   <article>
     <h2><a href="{% href %}">{% title %}</a></h2>
-    <If test={date}><time>{% date %}</time></If>
+    {% #if date %}<time>{% date %}</time>{% /if %}
     <p>{% summary | truncate(120) %}</p>
-    <div><Slot name="tags" /></div>
+    <div>{% slot "tags" %}</div>
   </article>
 </Component>
 ```
 
-**alert.html** — shows the `let` block with conditional variable assignment:
+**alert.grov** — shows the `{% #let %}` block with conditional variable assignment:
 
 ```html
 <Component name="Alert" type="info">
-  {% let %}
+  {% #let %}
     bg = "#d1ecf1"
     fg = "#0c5460"
     icon = "i"
@@ -170,23 +167,23 @@ This demonstrates nested components (tag inside card), slot fills, expression co
       fg = "#721c24"
       icon = "x"
     end
-  {% endlet %}
+  {% /let %}
   <div style="background: {% bg %}; color: {% fg %}">
     <span>{% icon %}</span>
-    <div><Slot /></div>
+    <div>{% #slot %}{% /slot %}</div>
   </div>
 </Component>
 ```
 
-**button.html** — shows ternary expressions:
+**button.grov** — shows ternary expressions:
 
 ```html
 <Component name="Button" label href="/" variant="primary">
-  {% let %}
+  {% #let %}
     bg = variant == "primary" ? "#e94560" : variant == "outline" ? "transparent" : "#6c757d"
     fg = variant == "outline" ? "#e94560" : "#fff"
-  {% endlet %}
-  <a href="{% href %}" style="background: {% bg %}; color: {% fg %}; border-color: {% variant != "outline" ? bg : "#e94560" %}">{% label %}</a>
+  {% /let %}
+  <a href="{% href %}" style="background: {% bg %}; color: {% fg %}">{% label %}</a>
 </Component>
 ```
 

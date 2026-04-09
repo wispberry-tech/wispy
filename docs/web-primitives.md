@@ -2,20 +2,20 @@
 
 Grove templates can declare CSS/JS assets, meta tags, and hoisted content. These are collected during rendering — including across nested imports, components, and layout composition — and returned in `RenderResult` for the application to assemble into the final HTML response.
 
-## ImportAsset
+## asset
 
 Declare a stylesheet or script dependency:
 
 ```html
-<ImportAsset src="/static/style.css" type="stylesheet" />
-<ImportAsset src="/static/app.js" type="script" />
+{% asset "/static/style.css" type="stylesheet" %}
+{% asset "/static/app.js" type="script" %}
 ```
 
 With priority and HTML attributes:
 
 ```html
-<ImportAsset src="/static/main.css" type="stylesheet" priority="10" />
-<ImportAsset src="/static/analytics.js" type="script" defer async />
+{% asset "/static/main.css" type="stylesheet" priority="10" %}
+{% asset "/static/analytics.js" type="script" defer async %}
 ```
 
 **Rules:**
@@ -26,14 +26,14 @@ With priority and HTML attributes:
 - Assets are deduplicated by `src` — declaring the same URL twice results in one entry
 - Assets declared in components bubble up to the top-level `RenderResult`
 
-## SetMeta
+## meta
 
 Declare document metadata:
 
 ```html
-<SetMeta name="description" content="A great page" />
-<SetMeta property="og:title" content="My Page" />
-<SetMeta property="og:image" content="https://example.com/image.png" />
+{% meta name="description" content="A great page" %}
+{% meta property="og:title" content="My Page" %}
+{% meta property="og:image" content="https://example.com/image.png" %}
 ```
 
 **Rules:**
@@ -42,18 +42,18 @@ Declare document metadata:
 - Last-write-wins for duplicate keys — a `Warning` is added to `RenderResult.Warnings` on collision
 - Meta tags from components bubble up
 
-## Hoist
+## hoist
 
 Capture rendered content and collect it into a named target instead of outputting it inline:
 
 ```html
-<Hoist target="head">
+{% #hoist "head" %}
   <link rel="preload" href="/font.woff2" as="font" crossorigin>
-</Hoist>
+{% /hoist %}
 
-<Hoist target="head">
+{% #hoist "head" %}
   <style>.hero { background: blue; }</style>
-</Hoist>
+{% /hoist %}
 ```
 
 **Rules:**
@@ -62,18 +62,18 @@ Capture rendered content and collect it into a named target instead of outputtin
 - Hoisted content is removed from `Body` and collected in `RenderResult.Hoisted`
 - Hoisted content from components bubbles up
 
-## Verbatim
+## verbatim
 
 Output Grove syntax literally without parsing:
 
 ```html
-<Verbatim>
+{% #verbatim %}
   {% this is not parsed %}
-  <If> neither is this </If>
-</Verbatim>
+  {# neither is this #}
+{% /verbatim %}
 ```
 
-Everything between `<Verbatim>` and `</Verbatim>` is emitted as raw text.
+Everything between `{% #verbatim %}` and `{% /verbatim %}` is emitted as raw text.
 
 ## RenderResult
 
@@ -158,16 +158,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 The base layout component uses placeholder comments that get replaced:
 
 ```html
-{# base.html #}
+{# base.grov #}
 <Component name="Base">
   <head>
-    <title><Slot name="title">My Site</Slot></title>
+    <title>{% #slot "title" %}My Site{% /slot %}</title>
     <!-- HEAD_ASSETS -->
     <!-- HEAD_META -->
     <!-- HEAD_HOISTED -->
   </head>
   <body>
-    <Slot name="content" />
+    {% slot "content" %}
     <!-- FOOT_ASSETS -->
   </body>
 </Component>
@@ -191,10 +191,10 @@ To output trusted HTML, use the `safe` filter:
 {% trusted_html | safe %}
 ```
 
-Or use `<Verbatim>` blocks to output template syntax literally (no parsing or escaping):
+Or use `{% #verbatim %}` blocks to output template syntax literally (no parsing or escaping):
 
 ```html
-<Verbatim>{% not parsed %}</Verbatim>
+{% #verbatim %}{% not parsed %}{% /verbatim %}
 ```
 
 From Go code, use `SafeHTMLValue` to mark a value as pre-trusted:

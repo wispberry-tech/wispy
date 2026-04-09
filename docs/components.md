@@ -7,7 +7,7 @@ Components are reusable templates with a declared interface. They accept data th
 Wrap a template in `<Component>` to define a named, reusable unit:
 
 ```html
-{# button.html #}
+{# button.grov #}
 <Component name="Button" label href="/" variant="primary">
   <a href="{% href %}" class="btn btn-{% variant %}">{% label %}</a>
 </Component>
@@ -35,43 +35,43 @@ Wrap a template in `<Component>` to define a named, reusable unit:
 
 ## Importing Components
 
-Use `<Import>` to bring components into scope before using them:
+Use `{% import %}` to bring components into scope before using them:
 
 ```html
-{# page.html #}
-<Import src="button" name="Button" />
+{# page.grov #}
+{% import Button from "button" %}
 
 <Button label="Click me" href="/action" />
 ```
 
-- `src` is the template path **without** the `.html` extension
-- `name` specifies which component to import from that file
+- The path is the template name **without** the `.grov` extension
+- The name after `import` must match the `name` attribute on `<Component>` in that file
 
 ### Import variants
 
 **Multiple components from one file:**
 
 ```html
-<Import src="ui" name="Card, Badge, Button" />
+{% import Card, Badge, Button from "ui" %}
 ```
 
 **Wildcard — import all components:**
 
 ```html
-<Import src="ui" name="*" />
+{% import * from "ui" %}
 ```
 
 **Alias — rename locally:**
 
 ```html
-<Import src="cards" name="Card" as="InfoCard" />
+{% import Card as InfoCard from "cards" %}
 <InfoCard title="Details" />
 ```
 
 **Namespaced wildcard:**
 
 ```html
-<Import src="ui" name="*" as="UI" />
+{% import * as UI from "ui" %}
 <UI.Card title="X" />
 <UI.Badge label="Y" />
 ```
@@ -81,7 +81,7 @@ Use `<Import>` to bring components into scope before using them:
 A single file can define multiple components:
 
 ```html
-{# ui.html #}
+{# ui.grov #}
 <Component name="Card" title>
   <div class="card">{% title %}</div>
 </Component>
@@ -102,57 +102,57 @@ Slots let callers inject content into specific points of a component.
 ### Default slot
 
 ```html
-{# box.html #}
+{# box.grov #}
 <Component name="Box">
   <div class="box">
-    <Slot>No content provided</Slot>
+    {% #slot %}No content provided{% /slot %}
   </div>
 </Component>
 ```
 
 ```html
 {# Using it: #}
-<Import src="box" name="Box" />
+{% import Box from "box" %}
 <Box>
   <p>This replaces "No content provided"</p>
 </Box>
 ```
 
-The content inside `<Slot>...</Slot>` is fallback content, rendered when the caller doesn't provide any.
+The content inside `{% #slot %}...{% /slot %}` is fallback content, rendered when the caller doesn't provide any.
 
 ### Named slots
 
 Components can define multiple injection points:
 
 ```html
-{# card.html #}
+{# card.grov #}
 <Component name="Card" title summary>
   <article>
     <h2>{% title %}</h2>
     <p>{% summary %}</p>
     <div class="tags">
-      <Slot name="tags" />
+      {% slot "tags" %}
     </div>
     <div class="actions">
-      <Slot name="actions"><a href="#">Read more</a></Slot>
+      {% #slot "actions" %}<a href="#">Read more</a>{% /slot %}
     </div>
   </article>
 </Component>
 ```
 
-Callers fill named slots with `<Fill>`:
+Callers fill named slots with `{% #fill %}`:
 
 ```html
-<Import src="card" name="Card" />
+{% import Card from "card" %}
 <Card title="My Post" summary="A summary">
-  <Fill slot="tags">
+  {% #fill "tags" %}
     <span class="tag">Go</span>
     <span class="tag">Templates</span>
-  </Fill>
-  <Fill slot="actions">
+  {% /fill %}
+  {% #fill "actions" %}
     <a href="/post/1">Read</a>
     <a href="/post/1/edit">Edit</a>
-  </Fill>
+  {% /fill %}
 </Card>
 ```
 
@@ -163,12 +163,12 @@ Unfilled named slots render their fallback content.
 Slots can pass data back to the caller using `data={expr}`:
 
 ```html
-{# list.html #}
+{# list.grov #}
 <Component name="List" items>
   <ul>
-    <For each={items} as="item">
-      <li><Slot name="item" data={item} /></li>
-    </For>
+    {% #each items as item %}
+      <li>{% slot "item" data={item} %}</li>
+    {% /each %}
   </ul>
 </Component>
 ```
@@ -176,29 +176,29 @@ Slots can pass data back to the caller using `data={expr}`:
 The caller accesses the slot data with `let:data`:
 
 ```html
-<Import src="list" name="List" />
+{% import List from "list" %}
 <List items={users}>
-  <Fill slot="item" let:data="user">
-    <strong>{% user.name %}</strong>
-  </Fill>
+  {% #fill "item" let:data %}
+    <strong>{% data.name %}</strong>
+  {% /fill %}
 </List>
 ```
 
 ## Scope Rules
 
 - **Props** are available inside the component template. The component cannot see the caller's variables.
-- **Fills see the caller's scope**, not the component's. This means you can use your page data inside a `<Fill>` block without threading it through props.
+- **Fills see the caller's scope**, not the component's. This means you can use your page data inside a `{% #fill %}` block without threading it through props.
 
 ```html
-{# page.html — caller's scope has "posts" #}
-<Import src="card" name="Card" />
+{# page.grov — caller's scope has "posts" #}
+{% import Card from "card" %}
 <Card title="Recent" summary="Latest posts">
-  <Fill slot="tags">
+  {% #fill "tags" %}
     {# This sees "posts" from the page, not from the card component #}
-    <For each={posts} as="post">
+    {% #each posts as post %}
       <span>{% post.title %}</span>
-    </For>
-  </Fill>
+    {% /each %}
+  {% /fill %}
 </Card>
 ```
 
@@ -207,17 +207,17 @@ The caller accesses the slot data with `let:data`:
 Template inheritance (`extends`/`block`) is replaced by component composition. Define a layout as a component with named slots:
 
 ```html
-{# base.html #}
+{# base.grov #}
 <Component name="Base">
   <!DOCTYPE html>
   <html>
   <head>
-    <title><Slot name="title">My Site</Slot></title>
+    <title>{% #slot "title" %}My Site{% /slot %}</title>
   </head>
   <body>
     <nav>...</nav>
-    <main><Slot name="content" /></main>
-    <footer><Slot name="footer">&copy; 2026 My Site</Slot></footer>
+    <main>{% slot "content" %}</main>
+    <footer>{% #slot "footer" %}&copy; 2026 My Site{% /slot %}</footer>
   </body>
   </html>
 </Component>
@@ -226,14 +226,14 @@ Template inheritance (`extends`/`block`) is replaced by component composition. D
 Pages import and fill the layout slots:
 
 ```html
-{# home.html #}
-<Import src="base" name="Base" />
+{# home.grov #}
+{% import Base from "base" %}
 <Base>
-  <Fill slot="title">Home — My Site</Fill>
-  <Fill slot="content">
+  {% #fill "title" %}Home — My Site{% /fill %}
+  {% #fill "content" %}
     <h1>Welcome</h1>
     <p>This fills the content slot.</p>
-  </Fill>
+  {% /fill %}
 </Base>
 ```
 
@@ -242,19 +242,19 @@ Pages import and fill the layout slots:
 Components can use other components:
 
 ```html
-{# post-list.html #}
+{# post-list.grov #}
 <Component name="PostList" posts>
-  <Import src="card" name="Card" />
-  <Import src="primitives/tag-badge" name="TagBadge" />
-  <For each={posts} as="post">
+  {% import Card from "card" %}
+  {% import TagBadge from "primitives/tag-badge" %}
+  {% #each posts as post %}
     <Card title={post.title} summary={post.summary}>
-      <Fill slot="tags">
-        <For each={post.tags} as="tag">
+      {% #fill "tags" %}
+        {% #each post.tags as tag %}
           <TagBadge label={tag.name} color={tag.color} />
-        </For>
-      </Fill>
+        {% /each %}
+      {% /fill %}
     </Card>
-  </For>
+  {% /each %}
 </Component>
 ```
 
@@ -263,7 +263,7 @@ Components can use other components:
 Render a component whose name is determined at runtime:
 
 ```html
-<Import src="icons" name="*" />
+{% import * from "icons" %}
 <Component is={icon_name} size="lg" />
 ```
 
@@ -288,14 +288,14 @@ Examples: cards, navigation bars, post lists.
 ```
 templates/
   primitives/
-    button/button.html
-    tag-badge/tag-badge.html
+    button/button.grov
+    tag-badge/tag-badge.grov
   composites/
-    card/card.html
-    nav/nav.html
+    card/card.grov
+    nav/nav.grov
   layouts/
-    base.html
-    docs.html
+    base.grov
+    docs.grov
 ```
 
 ### Path Resolution
@@ -303,5 +303,5 @@ templates/
 `FileSystemStore` resolves component paths in this order:
 
 1. **Exact match** — `composites/card` (file exists as-is)
-2. **Append .html** — `composites/card.html` (flat file)
-3. **Directory fallback** — `composites/card/card.html` (folder-per-component)
+2. **Append .grov** — `composites/card.grov` (flat file)
+3. **Directory fallback** — `composites/card/card.grov` (folder-per-component)
