@@ -52,13 +52,13 @@ func (p testProduct) GroveResolve(key string) (any, bool) {
 
 func TestVariables_SimpleString(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `Hello, {{ name }}!`, grove.Data{"name": "World"})
+	got := render(t, eng, `Hello, {% name %}!`, grove.Data{"name": "World"})
 	require.Equal(t, "Hello, World!", got)
 }
 
 func TestVariables_NestedAccess(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ user.address.city }}`, grove.Data{
+	got := render(t, eng, `{% user.address.city %}`, grove.Data{
 		"user": grove.Data{"address": grove.Data{"city": "Berlin"}},
 	})
 	require.Equal(t, "Berlin", got)
@@ -66,7 +66,7 @@ func TestVariables_NestedAccess(t *testing.T) {
 
 func TestVariables_IndexAccess(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ items[0] }}`, grove.Data{
+	got := render(t, eng, `{% items[0] %}`, grove.Data{
 		"items": []string{"alpha", "beta", "gamma"},
 	})
 	require.Equal(t, "alpha", got)
@@ -74,7 +74,7 @@ func TestVariables_IndexAccess(t *testing.T) {
 
 func TestVariables_MapAccess(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ config["debug"] }}`, grove.Data{
+	got := render(t, eng, `{% config["debug"] %}`, grove.Data{
 		"config": map[string]any{"debug": "true"},
 	})
 	require.Equal(t, "true", got)
@@ -82,13 +82,13 @@ func TestVariables_MapAccess(t *testing.T) {
 
 func TestVariables_UndefinedReturnsEmpty(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `[{{ missing }}]`, grove.Data{})
+	got := render(t, eng, `[{% missing %}]`, grove.Data{})
 	require.Equal(t, "[]", got)
 }
 
 func TestVariables_StrictModeErrors(t *testing.T) {
 	eng := newEngine(t, grove.WithStrictVariables(true))
-	err := renderErr(t, eng, `{{ missing }}`, grove.Data{})
+	err := renderErr(t, eng, `{% missing %}`, grove.Data{})
 	require.Error(t, err)
 	var re *grove.RuntimeError
 	require.ErrorAs(t, err, &re)
@@ -97,7 +97,7 @@ func TestVariables_StrictModeErrors(t *testing.T) {
 
 func TestVariables_Resolvable(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ product.name }}`, grove.Data{
+	got := render(t, eng, `{% product.name %}`, grove.Data{
 		"product": testProduct{Name: "Widget", price: 9.99},
 	})
 	require.Equal(t, "Widget", got)
@@ -105,7 +105,7 @@ func TestVariables_Resolvable(t *testing.T) {
 
 func TestVariables_ResolvableHidesUnexposed(t *testing.T) {
 	eng := newEngine(t, grove.WithStrictVariables(true))
-	err := renderErr(t, eng, `{{ product.secret }}`, grove.Data{
+	err := renderErr(t, eng, `{% product.secret %}`, grove.Data{
 		"product": testProduct{Name: "Widget", price: 9.99},
 	})
 	require.Error(t, err)
@@ -116,11 +116,11 @@ func TestVariables_ResolvableHidesUnexposed(t *testing.T) {
 func TestExpressions_Arithmetic(t *testing.T) {
 	eng := newEngine(t)
 	cases := []struct{ tmpl, want string }{
-		{`{{ 2 + 3 }}`, "5"},
-		{`{{ 10 - 4 }}`, "6"},
-		{`{{ 3 * 4 }}`, "12"},
-		{`{{ 10 / 4 }}`, "2.5"},
-		{`{{ 10 % 3 }}`, "1"},
+		{`{% 2 + 3 %}`, "5"},
+		{`{% 10 - 4 %}`, "6"},
+		{`{% 3 * 4 %}`, "12"},
+		{`{% 10 / 4 %}`, "2.5"},
+		{`{% 10 % 3 %}`, "1"},
 	}
 	for _, tc := range cases {
 		got := render(t, eng, tc.tmpl, grove.Data{})
@@ -130,31 +130,31 @@ func TestExpressions_Arithmetic(t *testing.T) {
 
 func TestExpressions_StringConcat(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, grove.Data{"name": "Wispy"})
+	got := render(t, eng, `{% "Hello" ~ ", " ~ name ~ "!" %}`, grove.Data{"name": "Wispy"})
 	require.Equal(t, "Hello, Wispy!", got)
 }
 
 func TestExpressions_Comparison(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ x > 5 }}`, grove.Data{"x": 10})
+	got := render(t, eng, `{% x > 5 %}`, grove.Data{"x": 10})
 	require.Equal(t, "true", got)
 }
 
 func TestExpressions_LogicalOperators(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": true})
+	got := render(t, eng, `{% a and b %}`, grove.Data{"a": true, "b": true})
 	require.Equal(t, "true", got)
-	got = render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": false})
+	got = render(t, eng, `{% a and b %}`, grove.Data{"a": true, "b": false})
 	require.Equal(t, "false", got)
 }
 
 func TestExpressions_Ternary(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ active ? name : "Guest" }}`, grove.Data{
+	got := render(t, eng, `{% active ? name : "Guest" %}`, grove.Data{
 		"name": "Alice", "active": true,
 	})
 	require.Equal(t, "Alice", got)
-	got = render(t, eng, `{{ active ? name : "Guest" }}`, grove.Data{
+	got = render(t, eng, `{% active ? name : "Guest" %}`, grove.Data{
 		"name": "Alice", "active": false,
 	})
 	require.Equal(t, "Guest", got)
@@ -163,24 +163,24 @@ func TestExpressions_Ternary(t *testing.T) {
 func TestExpressions_TernaryNested(t *testing.T) {
 	eng := newEngine(t)
 	// a ? b : c ? d : e  should be  a ? b : (c ? d : e)  (right-to-left)
-	got := render(t, eng, `{{ false ? "a" : true ? "b" : "c" }}`, grove.Data{})
+	got := render(t, eng, `{% false ? "a" : true ? "b" : "c" %}`, grove.Data{})
 	require.Equal(t, "b", got)
-	got = render(t, eng, `{{ false ? "a" : false ? "b" : "c" }}`, grove.Data{})
+	got = render(t, eng, `{% false ? "a" : false ? "b" : "c" %}`, grove.Data{})
 	require.Equal(t, "c", got)
-	got = render(t, eng, `{{ true ? "a" : true ? "b" : "c" }}`, grove.Data{})
+	got = render(t, eng, `{% true ? "a" : true ? "b" : "c" %}`, grove.Data{})
 	require.Equal(t, "a", got)
 }
 
 func TestExpressions_TernaryFilterPrecedence(t *testing.T) {
 	eng := newEngine(t)
 	// Filters bind tighter than ? — (x | upper) is evaluated first
-	got := render(t, eng, `{{ true ? name | upper : "fallback" }}`, grove.Data{"name": "alice"})
+	got := render(t, eng, `{% true ? name | upper : "fallback" %}`, grove.Data{"name": "alice"})
 	require.Equal(t, "ALICE", got)
 }
 
 func TestExpressions_Not(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ not banned }}`, grove.Data{"banned": false})
+	got := render(t, eng, `{% not banned %}`, grove.Data{"banned": false})
 	require.Equal(t, "true", got)
 }
 
@@ -188,7 +188,7 @@ func TestExpressions_Not(t *testing.T) {
 
 func TestFilters_SafeFilter_TrustedHTML(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ html | safe }}`, grove.Data{"html": "<b>bold</b>"})
+	got := render(t, eng, `{% html | safe %}`, grove.Data{"html": "<b>bold</b>"})
 	require.Equal(t, "<b>bold</b>", got)
 }
 
@@ -197,7 +197,7 @@ func TestFilters_CustomFilter(t *testing.T) {
 	eng.RegisterFilter("shout", func(v grove.Value, args []grove.Value) (grove.Value, error) {
 		return grove.StringValue(strings.ToUpper(v.String()) + "!!!"), nil
 	})
-	got := render(t, eng, `{{ msg | shout }}`, grove.Data{"msg": "hello"})
+	got := render(t, eng, `{% msg | shout %}`, grove.Data{"msg": "hello"})
 	require.Equal(t, "HELLO!!!", got)
 }
 
@@ -207,7 +207,7 @@ func TestFilters_CustomFilterWithArgs(t *testing.T) {
 		n := grove.ArgInt(args, 0, 2)
 		return grove.StringValue(strings.Repeat(v.String(), n)), nil
 	})
-	got := render(t, eng, `{{ "ha" | repeat(3) }}`, grove.Data{})
+	got := render(t, eng, `{% "ha" | repeat(3) %}`, grove.Data{})
 	require.Equal(t, "hahaha", got)
 }
 
@@ -219,7 +219,7 @@ func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
 		},
 		grove.FilterOutputsHTML(),
 	))
-	got := render(t, eng, `{{ name | bold }}`, grove.Data{"name": "Wispy"})
+	got := render(t, eng, `{% name | bold %}`, grove.Data{"name": "Wispy"})
 	require.Equal(t, "<b>Wispy</b>", got)
 }
 
@@ -227,7 +227,7 @@ func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
 
 func TestEscape_AutoEscapeByDefault(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ input }}`, grove.Data{
+	got := render(t, eng, `{% input %}`, grove.Data{
 		"input": `<script>alert("xss")</script>`,
 	})
 	require.Equal(t, `&lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;`, got)
@@ -235,19 +235,19 @@ func TestEscape_AutoEscapeByDefault(t *testing.T) {
 
 func TestEscape_SafeFilterBypassesEscape(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ html | safe }}`, grove.Data{"html": "<b>bold</b>"})
+	got := render(t, eng, `{% html | safe %}`, grove.Data{"html": "<b>bold</b>"})
 	require.Equal(t, "<b>bold</b>", got)
 }
 
 func TestEscape_RawBlockBypassesEscape(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, grove.Data{})
+	got := render(t, eng, `<Verbatim>{{ not_a_variable }}</Verbatim>`, grove.Data{})
 	require.Equal(t, "{{ not_a_variable }}", got)
 }
 
 func TestEscape_NilValueNoOutput(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `[{{ val }}]`, grove.Data{"val": nil})
+	got := render(t, eng, `[{% val %}]`, grove.Data{"val": nil})
 	require.Equal(t, "[]", got)
 }
 
@@ -255,26 +255,25 @@ func TestEscape_NilValueNoOutput(t *testing.T) {
 
 func TestWhitespace_StripLeft(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "  {{- name }}", grove.Data{"name": "Wispy"})
+	got := render(t, eng, "  {%- name %}", grove.Data{"name": "Wispy"})
 	require.Equal(t, "Wispy", got)
 }
 
 func TestWhitespace_StripRight(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "{{ name -}}  ", grove.Data{"name": "Wispy"})
+	got := render(t, eng, "{% name -%}  ", grove.Data{"name": "Wispy"})
 	require.Equal(t, "Wispy", got)
 }
 
 func TestWhitespace_StripBoth(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "  {{- name -}}  extra", grove.Data{"name": "Wispy"})
+	got := render(t, eng, "  {%- name -%}  extra", grove.Data{"name": "Wispy"})
 	require.Equal(t, "Wispyextra", got)
 }
 
 func TestWhitespace_TagStrip(t *testing.T) {
 	eng := newEngine(t)
-	// Uses {% raw %} as the tag vehicle since control-flow tags are Plan 2
-	got := render(t, eng, "before\n{%- raw -%}\nhello\n{%- endraw -%}\nafter", grove.Data{})
+	got := render(t, eng, "before\n<Verbatim>\nhello\n</Verbatim>\nafter", grove.Data{})
 	require.Equal(t, "beforehelloafter", got)
 }
 
@@ -283,8 +282,8 @@ func TestWhitespace_TagStrip(t *testing.T) {
 func TestGlobalContext_AvailableInAllRenders(t *testing.T) {
 	eng := newEngine(t)
 	eng.SetGlobal("siteName", "Acme Corp")
-	got1 := render(t, eng, `{{ siteName }}`, grove.Data{})
-	got2 := render(t, eng, `Welcome to {{ siteName }}`, grove.Data{})
+	got1 := render(t, eng, `{% siteName %}`, grove.Data{})
+	got2 := render(t, eng, `Welcome to {% siteName %}`, grove.Data{})
 	require.Equal(t, "Acme Corp", got1)
 	require.Equal(t, "Welcome to Acme Corp", got2)
 }
@@ -292,14 +291,14 @@ func TestGlobalContext_AvailableInAllRenders(t *testing.T) {
 func TestGlobalContext_RenderContextOverridesGlobal(t *testing.T) {
 	eng := newEngine(t)
 	eng.SetGlobal("greeting", "Hello")
-	got := render(t, eng, `{{ greeting }}`, grove.Data{"greeting": "Hi"})
+	got := render(t, eng, `{% greeting %}`, grove.Data{"greeting": "Hi"})
 	require.Equal(t, "Hi", got)
 }
 
 func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
 	eng := newEngine(t)
 	eng.SetGlobal("x", "global")
-	got := render(t, eng, `{{ x }}`, grove.Data{"x": "render"})
+	got := render(t, eng, `{% x %}`, grove.Data{"x": "render"})
 	require.Equal(t, "render", got)
 }
 
@@ -307,7 +306,7 @@ func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
 
 func TestError_ParseError_LineNumber(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), "line1\n{{ unclosed", grove.Data{})
+	_, err := eng.RenderTemplate(context.Background(), "line1\n{% unclosed", grove.Data{})
 	require.Error(t, err)
 	var pe *grove.ParseError
 	require.ErrorAs(t, err, &pe)
@@ -316,13 +315,13 @@ func TestError_ParseError_LineNumber(t *testing.T) {
 
 func TestError_UndefinedFilterInStrictMode(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{{ name | nonexistent }}`, grove.Data{"name": "x"})
+	_, err := eng.RenderTemplate(context.Background(), `{% name | nonexistent %}`, grove.Data{"name": "x"})
 	require.Error(t, err)
 }
 
 func TestError_DivisionByZero(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{{ 10 / x }}`, grove.Data{"x": 0})
+	_, err := eng.RenderTemplate(context.Background(), `{% 10 / x %}`, grove.Data{"x": 0})
 	require.Error(t, err)
 }
 
@@ -360,7 +359,7 @@ func TestEngine_ConcurrentRenders(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < renders; i++ {
 				got, err := eng.RenderTemplate(context.Background(),
-					`Hello, {{ name }}! ({{ id }})`,
+					`Hello, {% name %}! ({% id %})`,
 					grove.Data{"name": "Wispy", "id": id},
 				)
 				if err != nil {
@@ -391,7 +390,7 @@ func BenchmarkRender_SimpleSubstitution(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := eng.RenderTemplate(bgCtx, `Hello, {{ name }}! Count: {{ count }}.`, data)
+		_, err := eng.RenderTemplate(bgCtx, `Hello, {% name %}! Count: {% count %}.`, data)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -406,7 +405,7 @@ func BenchmarkRender_Parallel(b *testing.B) {
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, err := eng.RenderTemplate(bgCtx, `Hello, {{ name }}!`, data)
+			_, err := eng.RenderTemplate(bgCtx, `Hello, {% name %}!`, data)
 			if err != nil {
 				b.Fatal(err)
 			}
