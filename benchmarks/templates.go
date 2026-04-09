@@ -17,7 +17,7 @@ const (
 // --- Simple: variable interpolation ---
 
 var SimpleTemplates = map[string]string{
-	EngGrove:        `Hello, {{ name }}! You have {{ count }} messages.`,
+	EngGrove:        `Hello, {% name %}! You have {% count %} messages.`,
 	EngHTMLTemplate: `Hello, {{.Name}}! You have {{.Count}} messages.`,
 	EngTextTemplate: `Hello, {{.Name}}! You have {{.Count}} messages.`,
 	EngPongo2:       `Hello, {{ name }}! You have {{ count }} messages.`,
@@ -28,7 +28,7 @@ var SimpleTemplates = map[string]string{
 // --- Loop: iterate over a slice ---
 
 var LoopTemplates = map[string]string{
-	EngGrove: `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
+	EngGrove: `<ul><For each={items} as="item"><li>{% item %}</li></For></ul>`,
 	EngHTMLTemplate: `<ul>{{range .Items}}<li>{{.}}</li>{{end}}</ul>`,
 	EngTextTemplate: `<ul>{{range .Items}}<li>{{.}}</li>{{end}}</ul>`,
 	EngPongo2: `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
@@ -39,7 +39,7 @@ var LoopTemplates = map[string]string{
 // --- Conditional: if/elif/else ---
 
 var ConditionalTemplates = map[string]string{
-	EngGrove:        `{% if role == "admin" %}Admin Panel{% elif role == "mod" %}Mod Tools{% else %}User Dashboard{% endif %}`,
+	EngGrove:        `<If test={role == "admin"}>Admin Panel<ElseIf test={role == "mod"} />Mod Tools<Else />User Dashboard</If>`,
 	EngHTMLTemplate: `{{if eq .Role "admin"}}Admin Panel{{else if eq .Role "mod"}}Mod Tools{{else}}User Dashboard{{end}}`,
 	EngTextTemplate: `{{if eq .Role "admin"}}Admin Panel{{else if eq .Role "mod"}}Mod Tools{{else}}User Dashboard{{end}}`,
 	EngPongo2:       `{% if role == "admin" %}Admin Panel{% elif role == "mod" %}Mod Tools{% else %}User Dashboard{% endif %}`,
@@ -51,14 +51,14 @@ var ConditionalTemplates = map[string]string{
 
 var ComplexTemplates = map[string]string{
 	EngGrove: `<div class="posts">
-{% for post in posts %}
-<article class="post{% if post.featured %} featured{% endif %}">
-  <h2>{{ post.title }}</h2>
-  <span class="meta">By {{ post.author }} on {{ post.date }}</span>
-  <p>{{ post.excerpt }}</p>
-  {% if post.tags %}<div class="tags">{% for tag in post.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
+<For each={posts} as="post">
+<article class="post"><If test={post.featured}> featured</If>">
+  <h2>{% post.title %}</h2>
+  <span class="meta">By {% post.author %} on {% post.date %}</span>
+  <p>{% post.excerpt %}</p>
+  <If test={post.tags}><div class="tags"><For each={post.tags} as="tag"><span class="tag">{% tag %}</span></For></div></If>
 </article>
-{% endfor %}
+</For>
 </div>`,
 
 	EngHTMLTemplate: `<div class="posts">

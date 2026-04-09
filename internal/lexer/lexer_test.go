@@ -23,11 +23,13 @@ func TestLexer_PlainText(t *testing.T) {
 	require.Equal(t, "Hello, World!", toks[0].Value)
 }
 
-func TestLexer_OutputBlock(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ name }}")
+// In the new Alpine-POC syntax, {{ }} output delimiters are unified with {% %}.
+// TK_OUTPUT_START / TK_OUTPUT_END no longer exist; everything uses TK_TAG_START / TK_TAG_END.
+func TestLexer_ExpressionBlock(t *testing.T) {
+	toks, err := lexer.Tokenize("{% name %}")
 	require.NoError(t, err)
 	require.Equal(t, []lexer.TokenKind{
-		lexer.TK_OUTPUT_START, lexer.TK_IDENT, lexer.TK_OUTPUT_END, lexer.TK_EOF,
+		lexer.TK_TAG_START, lexer.TK_IDENT, lexer.TK_TAG_END, lexer.TK_EOF,
 	}, kinds(toks))
 	require.Equal(t, "name", toks[1].Value)
 }
@@ -40,11 +42,11 @@ func TestLexer_Comment_IsStripped(t *testing.T) {
 }
 
 func TestLexer_WhitespaceStripLeft(t *testing.T) {
-	toks, err := lexer.Tokenize("  {{- name }}")
+	toks, err := lexer.Tokenize("  {%- name %}")
 	require.NoError(t, err)
 	var start *lexer.Token
 	for i := range toks {
-		if toks[i].Kind == lexer.TK_OUTPUT_START {
+		if toks[i].Kind == lexer.TK_TAG_START {
 			start = &toks[i]
 		}
 	}
@@ -53,23 +55,23 @@ func TestLexer_WhitespaceStripLeft(t *testing.T) {
 	// Preceding text whitespace should be removed
 	for _, tk := range toks {
 		if tk.Kind == lexer.TK_TEXT {
-			require.NotEqual(t, "  ", tk.Value, "whitespace before {{- should be stripped")
+			require.NotEqual(t, "  ", tk.Value, "whitespace before {%- should be stripped")
 		}
 	}
 }
 
 func TestLexer_WhitespaceStripRight(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ name -}}  after")
+	toks, err := lexer.Tokenize("{% name -%}  after")
 	require.NoError(t, err)
 	var end *lexer.Token
 	for i := range toks {
-		if toks[i].Kind == lexer.TK_OUTPUT_END {
+		if toks[i].Kind == lexer.TK_TAG_END {
 			end = &toks[i]
 		}
 	}
 	require.NotNil(t, end)
 	require.True(t, end.StripRight)
-	// Text after -}} should have leading whitespace stripped
+	// Text after -%} should have leading whitespace stripped
 	for _, tk := range toks {
 		if tk.Kind == lexer.TK_TEXT {
 			require.NotEqual(t, "  after", tk.Value)
@@ -78,29 +80,34 @@ func TestLexer_WhitespaceStripRight(t *testing.T) {
 }
 
 func TestLexer_TagBlock(t *testing.T) {
-	toks, err := lexer.Tokenize("{% block %}")
+	// In the new syntax, "set" remains a keyword inside {% %}.
+	toks, err := lexer.Tokenize("{% set %}")
 	require.NoError(t, err)
 	require.Equal(t, []lexer.TokenKind{
 		lexer.TK_TAG_START, lexer.TK_IDENT, lexer.TK_TAG_END, lexer.TK_EOF,
 	}, kinds(toks))
-	require.Equal(t, "block", toks[1].Value)
+	require.Equal(t, "set", toks[1].Value)
 }
 
-func TestLexer_RawBlock(t *testing.T) {
-	toks, err := lexer.Tokenize("{% raw %}{{ not_parsed }}{% endraw %}")
+// In the new syntax, {% raw %}...{% endraw %} becomes <Verbatim>...</Verbatim>.
+// The lexer should recognize <Verbatim> as a special block and emit content as TEXT.
+// TODO: The exact token model for <Verbatim> may need new token types (e.g. TK_ELEMENT_OPEN).
+// For now, we test that the content inside <Verbatim> is emitted as a single TEXT token.
+func TestLexer_VerbatimBlock(t *testing.T) {
+	toks, err := lexer.Tokenize("<Verbatim>{% not_parsed %}</Verbatim>")
 	require.NoError(t, err)
-	// raw block content should come out as a single TEXT token
+	// Verbatim block content should come out as a single TEXT token
 	var textVal string
 	for _, tk := range toks {
 		if tk.Kind == lexer.TK_TEXT {
 			textVal = tk.Value
 		}
 	}
-	require.Equal(t, "{{ not_parsed }}", textVal)
+	require.Equal(t, "{% not_parsed %}", textVal)
 }
 
 func TestLexer_Operators(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ a + b - c * d / e % f ~ g }}")
+	toks, err := lexer.Tokenize("{% a + b - c * d / e % f ~ g %}")
 	require.NoError(t, err)
 	expected := []lexer.TokenKind{
 		lexer.TK_PLUS, lexer.TK_MINUS, lexer.TK_STAR,
@@ -118,7 +125,7 @@ func TestLexer_Operators(t *testing.T) {
 }
 
 func TestLexer_Comparison(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ a == b != c < d <= e > f >= g }}")
+	toks, err := lexer.Tokenize("{% a == b != c < d <= e > f >= g %}")
 	require.NoError(t, err)
 	want := []lexer.TokenKind{lexer.TK_EQ, lexer.TK_NEQ, lexer.TK_LT, lexer.TK_LTE, lexer.TK_GT, lexer.TK_GTE}
 	var got []lexer.TokenKind
@@ -133,7 +140,7 @@ func TestLexer_Comparison(t *testing.T) {
 }
 
 func TestLexer_Keywords(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ a and b or not c }}")
+	toks, err := lexer.Tokenize("{% a and b or not c %}")
 	require.NoError(t, err)
 	want := []lexer.TokenKind{lexer.TK_AND, lexer.TK_OR, lexer.TK_NOT}
 	var got []lexer.TokenKind
@@ -148,7 +155,7 @@ func TestLexer_Keywords(t *testing.T) {
 }
 
 func TestLexer_TernaryTokens(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ a ? b : c }}")
+	toks, err := lexer.Tokenize("{% a ? b : c %}")
 	require.NoError(t, err)
 	want := []lexer.TokenKind{lexer.TK_QUESTION, lexer.TK_COLON}
 	var got []lexer.TokenKind
@@ -162,8 +169,10 @@ func TestLexer_TernaryTokens(t *testing.T) {
 	require.Equal(t, want, got)
 }
 
-func TestLexer_IfElseAreIdents(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ if }}")
+// In the new syntax, "if" and "for" are no longer keywords inside {% %} --
+// they become PascalCase elements (<If>, <For>). Inside {% %}, "if" is just an ident.
+func TestLexer_IfIsIdentInsideTag(t *testing.T) {
+	toks, err := lexer.Tokenize("{% if %}")
 	require.NoError(t, err)
 	for _, tk := range toks {
 		if tk.Value == "if" {
@@ -175,7 +184,7 @@ func TestLexer_IfElseAreIdents(t *testing.T) {
 }
 
 func TestLexer_BoolLiterals(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ true }} {{ false }}")
+	toks, err := lexer.Tokenize("{% true %} {% false %}")
 	require.NoError(t, err)
 	var got []lexer.TokenKind
 	for _, tk := range toks {
@@ -187,7 +196,7 @@ func TestLexer_BoolLiterals(t *testing.T) {
 }
 
 func TestLexer_StringLiteral(t *testing.T) {
-	toks, err := lexer.Tokenize(`{{ "hello world" }}`)
+	toks, err := lexer.Tokenize(`{% "hello world" %}`)
 	require.NoError(t, err)
 	var str *lexer.Token
 	for i := range toks {
@@ -200,7 +209,7 @@ func TestLexer_StringLiteral(t *testing.T) {
 }
 
 func TestLexer_IntLiteral(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ 42 }}")
+	toks, err := lexer.Tokenize("{% 42 %}")
 	require.NoError(t, err)
 	var num *lexer.Token
 	for i := range toks {
@@ -213,7 +222,7 @@ func TestLexer_IntLiteral(t *testing.T) {
 }
 
 func TestLexer_FloatLiteral(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ 3.14 }}")
+	toks, err := lexer.Tokenize("{% 3.14 %}")
 	require.NoError(t, err)
 	var num *lexer.Token
 	for i := range toks {
@@ -226,7 +235,7 @@ func TestLexer_FloatLiteral(t *testing.T) {
 }
 
 func TestLexer_LineNumbers(t *testing.T) {
-	toks, err := lexer.Tokenize("line1\n{{ name }}")
+	toks, err := lexer.Tokenize("line1\n{% name %}")
 	require.NoError(t, err)
 	for _, tk := range toks {
 		if tk.Kind == lexer.TK_IDENT {
@@ -238,7 +247,7 @@ func TestLexer_LineNumbers(t *testing.T) {
 }
 
 func TestLexer_Filter(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ name | upcase }}")
+	toks, err := lexer.Tokenize("{% name | upcase %}")
 	require.NoError(t, err)
 	hasPipe := false
 	for _, tk := range toks {
@@ -250,7 +259,7 @@ func TestLexer_Filter(t *testing.T) {
 }
 
 func TestLexer_DotAccess(t *testing.T) {
-	toks, err := lexer.Tokenize("{{ user.name }}")
+	toks, err := lexer.Tokenize("{% user.name %}")
 	require.NoError(t, err)
 	hasDot := false
 	for _, tk := range toks {
@@ -261,8 +270,8 @@ func TestLexer_DotAccess(t *testing.T) {
 	require.True(t, hasDot)
 }
 
-func TestLexer_UnclosedOutput_Error(t *testing.T) {
-	_, err := lexer.Tokenize("{{ unclosed")
+func TestLexer_UnclosedTag_Error(t *testing.T) {
+	_, err := lexer.Tokenize("{% unclosed")
 	require.Error(t, err)
 }
 

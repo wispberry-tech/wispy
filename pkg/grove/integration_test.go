@@ -1,4 +1,4 @@
-// pkg/wispy/integration_test.go
+// pkg/grove/integration_test.go
 package grove_test
 
 import (
@@ -11,13 +11,15 @@ import (
 	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
-// ─── Macro defined at page level + component fill ─────────────────────────────
+// --- Component definition + slot fill (replaces macro + component) ---
 
-func TestIntegration_MacroAndComponent(t *testing.T) {
-	// Macro defined at the template level, then called inside a component slot fill.
+func TestIntegration_ComponentAndSlotFill(t *testing.T) {
+	// A component defined in one template, imported and used with slot fill in another.
 	store := grove.NewMemoryStore()
-	store.Set("card.html", `<div class="card">{% slot %}{% endslot %}</div>`)
-	store.Set("page.html", `{% macro badge(label) %}<span>{{ label }}</span>{% endmacro %}{% component "card.html" %}{{ badge("New") }}{% endcomponent %}`)
+	store.Set("card.html", `<div class="card"><Slot /></div>`)
+	// Badge is now a component defined in its own template.
+	store.Set("badge.html", `<Component name="Badge"><span>{% label %}</span></Component>`)
+	store.Set("page.html", `<Import src="card.html" name="Card" /><Import src="badge.html" name="Badge" /><Card><Badge label="New" /></Card>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -25,13 +27,14 @@ func TestIntegration_MacroAndComponent(t *testing.T) {
 	require.Equal(t, `<div class="card"><span>New</span></div>`, result.Body)
 }
 
-// ─── Imported macro used inside component fill ────────────────────────────────
+// --- Imported component used inside another component's fill ---
 
-func TestIntegration_ImportedMacroInComponentFill(t *testing.T) {
+func TestIntegration_ImportedComponentInSlotFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("macros.html", `{% macro tag(name) %}<{{ name }}>{% endmacro %}`)
-	store.Set("wrap.html", `<section>{% slot %}{% endslot %}</section>`)
-	store.Set("page.html", `{% import "macros.html" as m %}{% component "wrap.html" %}{{ m.tag("span") }}{% endcomponent %}`)
+	// "tag" component renders a dynamic HTML element (replaces the macro)
+	store.Set("tags.html", `<Component name="Tag"><{% name %}></Component>`)
+	store.Set("wrap.html", `<section><Slot /></section>`)
+	store.Set("page.html", `<Import src="tags.html" name="Tag" /><Import src="wrap.html" name="Wrap" /><Wrap><Tag name="span" /></Wrap>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -39,14 +42,14 @@ func TestIntegration_ImportedMacroInComponentFill(t *testing.T) {
 	require.Equal(t, "<section><span></section>", result.Body)
 }
 
-// ─── Asset + hoist bubble from component to page ──────────────────────────────
+// --- Asset + hoist bubble from component to page ---
 
 func TestIntegration_ComponentBubblesAssetAndHoist(t *testing.T) {
 	// Asset declared and hoist emitted inside a component should appear in the
 	// top-level RenderResult, not in the component body.
 	store := grove.NewMemoryStore()
-	store.Set("widget.html", `{% asset "widget.css" type="stylesheet" %}{% hoist target="foot" %}<script>w()</script>{% endhoist %}<div>widget</div>`)
-	store.Set("page.html", `{% component "widget.html" %}{% endcomponent %}`)
+	store.Set("widget.html", `<ImportAsset src="widget.css" type="stylesheet" /><Hoist target="foot"><script>w()</script></Hoist><div>widget</div>`)
+	store.Set("page.html", `<Import src="widget.html" name="Widget" /><Widget />`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -57,13 +60,13 @@ func TestIntegration_ComponentBubblesAssetAndHoist(t *testing.T) {
 	require.Contains(t, result.GetHoisted("foot"), "w()")
 }
 
-// ─── Inheritance: child provides data, parent uses in block ───────────────────
+// --- Layout composition: child fills slots in parent (replaces extends/block) ---
 
-func TestIntegration_InheritanceWithDataVars(t *testing.T) {
-	// Variables from render data are visible in both parent and child block content.
+func TestIntegration_LayoutCompositionWithDataVars(t *testing.T) {
+	// Variables from render data are visible in both layout and fill content.
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<html><title>{% block title %}{% endblock %}</title><body>{% block body %}{% endblock %}</body></html>`)
-	store.Set("page.html", `{% extends "base.html" %}{% block title %}{{ site }} — {{ page_title }}{% endblock %}{% block body %}{{ content }}{% endblock %}`)
+	store.Set("base.html", `<html><title><Slot name="title" /></title><body><Slot name="body" /></body></html>`)
+	store.Set("page.html", `<Import src="base.html" name="Base" /><Base><Fill slot="title">{% site %} — {% page_title %}</Fill><Fill slot="body">{% content %}</Fill></Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{
@@ -75,14 +78,14 @@ func TestIntegration_InheritanceWithDataVars(t *testing.T) {
 	require.Equal(t, "<html><title>Acme — Home</title><body>Welcome!</body></html>", result.Body)
 }
 
-// ─── Concurrent renders — race detector target ────────────────────────────────
+// --- Concurrent renders - race detector target ---
 
 func TestIntegration_ConcurrentRenders(t *testing.T) {
-	// Multiple goroutines render the same multi-template inheritance chain concurrently.
-	// Run with -race to detect data races: go test -race ./pkg/wispy/...
+	// Multiple goroutines render the same multi-template composition concurrently.
+	// Run with -race to detect data races: go test -race ./pkg/grove/...
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `[{% block title %}base{% endblock %}|{% block body %}{% endblock %}]`)
-	store.Set("page.html", `{% extends "base.html" %}{% block title %}{{ title }}{% endblock %}{% block body %}{{ content }}{% endblock %}`)
+	store.Set("base.html", `[<Slot name="title">base</Slot>|<Slot name="body" />]`)
+	store.Set("page.html", `<Import src="base.html" name="Base" /><Base><Fill slot="title">{% title %}</Fill><Fill slot="body">{% content %}</Fill></Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	ctx := context.Background()
@@ -124,13 +127,13 @@ func TestIntegration_ConcurrentRenders(t *testing.T) {
 	}
 }
 
-// ─── component/asset/hoist inside block of extending template ─────────────────
+// --- Component inside layout fill (replaces component inside block of extends) ---
 
-func TestIntegration_ComponentInsideBlockOfExtends(t *testing.T) {
+func TestIntegration_ComponentInsideLayoutFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<html><body>{% block content %}{% endblock %}</body></html>`)
-	store.Set("card.html", `<div>{% slot %}{% endslot %}</div>`)
-	store.Set("page.html", `{% extends "base.html" %}{% block content %}{% component "card.html" %}hello{% endcomponent %}{% endblock %}`)
+	store.Set("base.html", `<html><body><Slot name="content" /></body></html>`)
+	store.Set("card.html", `<div><Slot /></div>`)
+	store.Set("page.html", `<Import src="base.html" name="Base" /><Import src="card.html" name="Card" /><Base><Fill slot="content"><Card>hello</Card></Fill></Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -138,10 +141,10 @@ func TestIntegration_ComponentInsideBlockOfExtends(t *testing.T) {
 	require.Equal(t, "<html><body><div>hello</div></body></html>", result.Body)
 }
 
-func TestIntegration_AssetInsideBlockOfExtends(t *testing.T) {
+func TestIntegration_AssetInsideLayoutFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<body>{% block content %}{% endblock %}</body>`)
-	store.Set("child.html", `{% extends "base.html" %}{% block content %}{% asset "app.css" type="stylesheet" %}content{% endblock %}`)
+	store.Set("base.html", `<body><Slot name="content" /></body>`)
+	store.Set("child.html", `<Import src="base.html" name="Base" /><Base><Fill slot="content"><ImportAsset src="app.css" type="stylesheet" />content</Fill></Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "child.html", grove.Data{})
@@ -150,10 +153,10 @@ func TestIntegration_AssetInsideBlockOfExtends(t *testing.T) {
 	require.Len(t, result.Assets, 1)
 }
 
-func TestIntegration_HoistInsideBlockOfExtends(t *testing.T) {
+func TestIntegration_HoistInsideLayoutFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<body>{% block content %}{% endblock %}</body>`)
-	store.Set("child.html", `{% extends "base.html" %}{% block content %}{% hoist target="head" %}<style>.x{}</style>{% endhoist %}content{% endblock %}`)
+	store.Set("base.html", `<body><Slot name="content" /></body>`)
+	store.Set("child.html", `<Import src="base.html" name="Base" /><Base><Fill slot="content"><Hoist target="head"><style>.x{}</style></Hoist>content</Fill></Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "child.html", grove.Data{})
