@@ -27,37 +27,37 @@ func AllTimingScenarios() []TimingScenario {
 
 var LargePageTemplates = map[string]string{
 	EngGrove: `<!DOCTYPE html>
-<html lang="{{ lang }}">
+<html lang="{% lang %}">
 <head>
   <meta charset="utf-8">
-  <title>{{ site_name }} — {{ page_title }}</title>
-  <meta name="description" content="{{ meta_description }}">
-  <meta name="author" content="{{ meta_author }}">
-  <link rel="canonical" href="{{ canonical_url }}">
+  <title>{% site_name %} — {% page_title %}</title>
+  <meta name="description" content="{% meta_description %}">
+  <meta name="author" content="{% meta_author %}">
+  <link rel="canonical" href="{% canonical_url %}">
 </head>
 <body>
   <header>
     <nav>
-      <a href="/" class="logo">{{ site_name }}</a>
-      <span class="tagline">{{ tagline }}</span>
+      <a href="/" class="logo">{% site_name %}</a>
+      <span class="tagline">{% tagline %}</span>
     </nav>
-    <div class="user">Welcome, {{ user_name }} ({{ user_role }})</div>
+    <div class="user">Welcome, {% user_name %} ({% user_role %})</div>
   </header>
   <main>
     <article>
-      <h1>{{ page_title }}</h1>
-      <p class="lead">{{ lead_text }}</p>
-      <div class="content">{{ body_text }}</div>
+      <h1>{% page_title %}</h1>
+      <p class="lead">{% lead_text %}</p>
+      <div class="content">{% body_text %}</div>
       <footer>
-        <span class="category">{{ category }}</span>
-        <time>{{ published_date }}</time>
-        <span class="reading-time">{{ reading_time }} min read</span>
+        <span class="category">{% category %}</span>
+        <time>{% published_date %}</time>
+        <span class="reading-time">{% reading_time %} min read</span>
       </footer>
     </article>
   </main>
   <footer>
-    <p>&copy; {{ copyright_year }} {{ site_name }}. All rights reserved.</p>
-    <p>{{ footer_text }}</p>
+    <p>&copy; {% copyright_year %} {% site_name %}. All rights reserved.</p>
+    <p>{% footer_text %}</p>
   </footer>
 </body>
 </html>`,
@@ -247,15 +247,15 @@ var LargePageTemplates = map[string]string{
 
 var LargeLoopTemplates = map[string]string{
 	EngGrove: `<div class="products">
-{% for product in products %}
-<div class="product{% if product.on_sale %} on-sale{% endif %}">
-  <h3>{{ product.name }}</h3>
-  <p class="price">${{ product.price }}</p>
-  <p class="desc">{{ product.description }}</p>
-  <span class="category">{{ product.category }}</span>
-  {% if product.in_stock %}<span class="badge">In Stock</span>{% else %}<span class="badge out">Out of Stock</span>{% endif %}
+<For each={products} as="product">
+<div class="product"><If test={product.on_sale}> on-sale</If>">
+  <h3>{% product.name %}</h3>
+  <p class="price">${% product.price %}</p>
+  <p class="desc">{% product.description %}</p>
+  <span class="category">{% product.category %}</span>
+  <If test={product.in_stock}><span class="badge">In Stock</span><Else /><span class="badge out">Out of Stock</span></If>
 </div>
-{% endfor %}
+</For>
 </div>`,
 
 	EngHTMLTemplate: `<div class="products">
@@ -323,20 +323,20 @@ var LargeLoopTemplates = map[string]string{
 
 var NestedLoopTemplates = map[string]string{
 	EngGrove: `<div class="catalog">
-{% for cat in categories %}
+<For each={categories} as="cat">
 <section class="category">
-  <h2>{{ cat.name }} ({{ cat.count }} items)</h2>
+  <h2>{% cat.name %} ({% cat.count %} items)</h2>
   <div class="items">
-  {% for product in cat.products %}
-    <div class="product{% if product.featured %} featured{% endif %}">
-      <span class="name">{{ product.name }}</span>
-      <span class="price">${{ product.price }}</span>
-      {% if product.on_sale %}<span class="sale">SALE</span>{% endif %}
+  <For each={cat.products} as="product">
+    <div class="product"><If test={product.featured}> featured</If>">
+      <span class="name">{% product.name %}</span>
+      <span class="price">${% product.price %}</span>
+      <If test={product.on_sale}><span class="sale">SALE</span></If>
     </div>
-  {% endfor %}
+  </For>
   </div>
 </section>
-{% endfor %}
+</For>
 </div>`,
 
 	EngHTMLTemplate: `<div class="catalog">
@@ -429,64 +429,64 @@ var NestedLoopTemplates = map[string]string{
 
 var ComplexPageTemplates = map[string]string{
 	EngGrove: `<!DOCTYPE html>
-<html lang="{{ lang }}">
+<html lang="{% lang %}">
 <head>
   <meta charset="utf-8">
-  <title>{{ site_name }} — {{ page_title }}</title>
-  <meta name="description" content="{{ meta_description }}">
+  <title>{% site_name %} — {% page_title %}</title>
+  <meta name="description" content="{% meta_description %}">
 </head>
 <body>
   <header>
     <nav>
-      <a href="/">{{ site_name }}</a>
-      {% if user_logged_in %}
-        <span>Welcome, {{ user_name }}</span>
-        <a href="/cart">Cart ({{ cart_count }})</a>
-      {% else %}
+      <a href="/">{% site_name %}</a>
+      <If test={user_logged_in}>
+        <span>Welcome, {% user_name %}</span>
+        <a href="/cart">Cart ({% cart_count %})</a>
+      <Else />
         <a href="/login">Sign In</a>
-      {% endif %}
+      </If>
     </nav>
   </header>
   <main>
-    <h1>{{ page_title }}</h1>
-    <p class="lead">{{ lead_text }}</p>
+    <h1>{% page_title %}</h1>
+    <p class="lead">{% lead_text %}</p>
 
-    {% for cat in categories %}
+    <For each={categories} as="cat">
     <section class="category">
-      <h2>{{ cat.name }}</h2>
-      <p>{{ cat.description }}</p>
+      <h2>{% cat.name %}</h2>
+      <p>{% cat.description %}</p>
       <div class="products">
-      {% for product in cat.products %}
-        <div class="product{% if product.featured %} featured{% endif %}{% if product.on_sale %} on-sale{% endif %}">
-          <h3>{{ product.name }}</h3>
-          <p>{{ product.description }}</p>
+      <For each={cat.products} as="product">
+        <div class="product"><If test={product.featured}> featured</If><If test={product.on_sale}> on-sale</If>">
+          <h3>{% product.name %}</h3>
+          <p>{% product.description %}</p>
           <div class="pricing">
-            <span class="price">${{ product.price }}</span>
-            {% if product.on_sale %}<span class="original">${{ product.original_price }}</span>{% endif %}
+            <span class="price">${% product.price %}</span>
+            <If test={product.on_sale}><span class="original">${% product.original_price %}</span></If>
           </div>
-          <span class="category-tag">{{ cat.name }}</span>
-          {% if product.in_stock %}
+          <span class="category-tag">{% cat.name %}</span>
+          <If test={product.in_stock}>
             <button>Add to Cart</button>
-          {% else %}
+          <Else />
             <button disabled>Out of Stock</button>
-          {% endif %}
-          {% if product.tags %}
+          </If>
+          <If test={product.tags}>
           <div class="tags">
-            {% for tag in product.tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+            <For each={product.tags} as="tag"><span class="tag">{% tag %}</span></For>
           </div>
-          {% endif %}
+          </If>
         </div>
-      {% endfor %}
+      </For>
       </div>
     </section>
-    {% endfor %}
+    </For>
   </main>
   <footer>
-    <p>&copy; {{ copyright_year }} {{ site_name }}</p>
+    <p>&copy; {% copyright_year %} {% site_name %}</p>
     <ul class="links">
-    {% for link in footer_links %}
-      <li><a href="{{ link.url }}">{{ link.label }}</a></li>
-    {% endfor %}
+    <For each={footer_links} as="link">
+      <li><a href="{% link.url %}">{% link.label %}</a></li>
+    </For>
     </ul>
   </footer>
 </body>
