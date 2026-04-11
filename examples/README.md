@@ -25,6 +25,7 @@ A **professional tech publication** with article management, tagging, author bio
 
 **Demonstrates:**
 - Component composition (base layouts, cards, author profiles)
+- Per-component CSS and JS co-located with `.grov` templates
 - Conditional rendering (`{% if %}`) and loops (`{% each %}`)
 - Template inheritance via slots (`{% slot %}` / `{% #fill %}`)
 - Semantic HTML and accessibility patterns
@@ -125,19 +126,32 @@ examples/
 ├── blog/
 │   ├── main.go                 # Server & data fixtures
 │   ├── static/
-│   │   ├── style.css           # Blog stylesheet
+│   │   ├── base.css            # Global resets, layout, utilities
 │   │   └── tokens.css          # Copy of shared tokens
 │   └── templates/
-│       ├── base.grov           # Main layout shell
+│       ├── base.grov           # Main layout — declares base.css
 │       ├── index.grov          # Homepage
 │       ├── post.grov           # Single article
-│       ├── composites/         # Reusable component sections
-│       └── primitives/         # Atomic components
+│       ├── composites/
+│       │   ├── nav/
+│       │   │   ├── nav.grov    # Navigation component
+│       │   │   ├── nav.css     # Nav styles (co-located)
+│       │   │   └── nav.js      # Mobile menu toggle
+│       │   └── card/
+│       │       ├── card.grov   # Post card component
+│       │       └── card.css    # Card styles (co-located)
+│       └── primitives/
+│           └── button/
+│               ├── button.grov # Button component
+│               ├── button.css  # Button styles (co-located)
+│               └── button.js   # Loading state behavior
 ├── store/
 ├── email/
 ├── docs/
 └── README.md                   # This file
 ```
+
+Each component owns its CSS and JS files. Components declare their dependencies via `{% asset %}`, which bubble up through composition and are deduplicated in `RenderResult`. Global styles live in `static/base.css` and load first (via `priority=10`).
 
 ---
 

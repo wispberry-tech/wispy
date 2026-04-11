@@ -47,7 +47,7 @@ Grove templates use a single `{% %}` delimiter for server operations (control fl
 
 <Base>
   {% #fill "content" %}
-    {% asset "/static/page.css" type="stylesheet" %}
+    {% asset "/css/composites/card/card.css" type="stylesheet" %}
     {% meta name="description" content="Latest posts" %}
 
     <h1>{% title | upper %}</h1>
@@ -99,7 +99,7 @@ Grove templates use a single `{% %}` delimiter for server operations (control fl
 | **Components** | `<Component>` definitions with props, `{% slot %}`, and `{% #fill %}`. Fills see the caller's scope, not the component's. Scoped slots pass data back to callers. |
 | **Layouts** | Layouts are components with named slots — no special inheritance system. Compose layouts to any depth. |
 | **Imports** | `{% import %}` brings components into scope. |
-| **Web primitives** | `{% asset %}`, `{% meta %}`, and `{% #hoist %}` collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response. |
+| **Web primitives** | `{% asset %}`, `{% meta %}`, and `{% #hoist %}` collect resources during rendering. Components declare their own CSS/JS assets, which bubble up through composition. `RenderResult` returns them for assembly into the final HTML response. |
 | **Auto-escaping** | HTML output is escaped by default. `safe` filter and `{% #verbatim %}` blocks bypass it for trusted content. |
 | **Sandboxing** | Restrict allowed tags, filters, and loop iterations per engine. |
 

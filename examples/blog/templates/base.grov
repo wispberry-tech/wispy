@@ -1,5 +1,5 @@
 <Component name="Base">
-{% asset "/static/style.css" type="stylesheet" priority=10 %}
+{% asset "/static/base.css" type="stylesheet" priority=10 %}
 {% import Nav from "composites/nav" %}
 {% import Footer from "primitives/footer" %}
 <!DOCTYPE html>

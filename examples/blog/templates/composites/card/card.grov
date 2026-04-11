@@ -1,4 +1,5 @@
 <Component name="Card" title summary href="#" date="" author_name="" author_slug="">
+{% asset "/css/composites/card/card.css" type="stylesheet" %}
 <article class="card">
   <h2 class="card-title">
     <a href="{% href %}">{% title %}</a>

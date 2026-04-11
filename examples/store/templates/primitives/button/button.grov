@@ -1,4 +1,5 @@
 <Component name="Button" label href="#" variant="primary" type="link">
+{% asset "/css/primitives/button/button.css" type="stylesheet" %}
 {% asset "/js/primitives/button/button.js" type="script" %}
 
 {% #if type == "link" %}

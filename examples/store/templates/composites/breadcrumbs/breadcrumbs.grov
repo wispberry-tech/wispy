@@ -1,4 +1,5 @@
 <Component name="Breadcrumbs" breadcrumbs>
+{% asset "/css/composites/breadcrumbs/breadcrumbs.css" type="stylesheet" %}
 <nav class="breadcrumb">
   {% #each breadcrumbs as crumb %}
     {% #if crumb.href %}

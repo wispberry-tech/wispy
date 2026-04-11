@@ -26,6 +26,38 @@ With priority and HTML attributes:
 - Assets are deduplicated by `src` — declaring the same URL twice results in one entry
 - Assets declared in components bubble up to the top-level `RenderResult`
 
+### Per-Component Assets
+
+Components declare their own CSS and JS dependencies. When a page renders components that use other components, all assets bubble up and are deduplicated in `RenderResult`:
+
+```html
+{# composites/nav/nav.grov #}
+<Component name="Nav" site_name>
+  {% asset "/css/composites/nav/nav.css" type="stylesheet" %}
+  {% asset "/js/composites/nav/nav.js" type="script" %}
+  <nav class="nav">...</nav>
+</Component>
+```
+
+Global styles (resets, layout, utilities) live in `static/base.css` and are declared with higher priority in the base layout so they load first:
+
+```html
+{# base.grov #}
+<Component name="Base">
+  {% asset "/static/base.css" type="stylesheet" priority=10 %}
+  ...
+</Component>
+```
+
+Component assets use the default priority (0), which means `HeadHTML()` outputs `base.css` before component stylesheets — preserving the correct cascade order.
+
+The Go application serves co-located files from the template directory using a filtered handler that only serves `.css` and `.js` files (not `.grov` source):
+
+```go
+r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
+r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
+```
+
 ## meta
 
 Declare document metadata:
@@ -160,6 +192,7 @@ The base layout component uses placeholder comments that get replaced:
 ```html
 {# base.grov #}
 <Component name="Base">
+  {% asset "/static/base.css" type="stylesheet" priority=10 %}
   <head>
     <title>{% #slot "title" %}My Site{% /slot %}</title>
     <!-- HEAD_ASSETS -->
@@ -173,7 +206,7 @@ The base layout component uses placeholder comments that get replaced:
 </Component>
 ```
 
-This pattern keeps template authors and application developers in their own domains — templates declare what they need, and the Go layer assembles it.
+This pattern keeps template authors and application developers in their own domains — templates declare what they need, and the Go layer assembles it. Global styles load via the base layout, while component-specific styles are co-located with each component and collected automatically during rendering.
 
 ## Auto-Escaping
 

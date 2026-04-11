@@ -1,4 +1,5 @@
 <Component name="AuthorCard" name slug bio="" avatar_url="" role="">
+{% asset "/css/composites/author-card/author-card.css" type="stylesheet" %}
 <div class="author-card">
   {% #if avatar_url %}
     <div class="author-avatar">

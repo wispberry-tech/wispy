@@ -1,0 +1,82 @@
+/* Sidebar Component */
+
+.sidebar {
+  width: 220px;
+  padding: 1.5rem 1rem;
+}
+
+.sidebar-heading {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 0.4rem 0.75rem;
+  margin: 2px 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-dark);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.sidebar-link-active {
+  background: var(--color-primary);
+  color: var(--color-cream);
+}
+
+.sidebar-nav {
+  padding: 1.5rem 0;
+}
+
+.sidebar-section {
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-section-title {
+  margin: 0 0 0.5rem;
+  padding: 0 1.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.sidebar-section-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.sidebar-section-title a:hover {
+  color: var(--color-primary);
+}
+
+.sidebar-page-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar-page-list li a {
+  display: block;
+  padding: 0.35rem 1.25rem;
+  font-size: 0.9rem;
+  color: var(--color-dark);
+  text-decoration: none;
+  border-radius: 0;
+}
+
+.sidebar-page-list li a:hover {
+  color: var(--color-primary);
+  background: var(--color-green-light);
+}
+
+.sidebar-active {
+  color: var(--color-primary) !important;
+  background: var(--color-green-light) !important;
+  font-weight: 600;
+}

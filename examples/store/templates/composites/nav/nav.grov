@@ -1,4 +1,5 @@
 <Component name="Nav" site_name cart_count>
+{% asset "/css/composites/nav/nav.css" type="stylesheet" %}
 <nav class="nav" aria-label="Main navigation">
   <a href="/" class="nav-brand">{% site_name %}</a>
   <div class="nav-links">

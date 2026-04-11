@@ -1,4 +1,5 @@
 <Component name="TagBadge" label color="gray" slug="">
+{% asset "/css/primitives/tag-badge/tag-badge.css" type="stylesheet" %}
 {% #if slug %}
   <a href="/tag/{% slug %}" class="tag tag-{% color %}">{% label %}</a>
 {% :else %}

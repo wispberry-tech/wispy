@@ -1,4 +1,5 @@
 <Component name="ProductCard" name slug image_url price_display rating="0" review_count="0">
+{% asset "/css/composites/product-card/product-card.css" type="stylesheet" %}
 <div class="product-card">
   <a href="/product/{% slug %}" class="product-card-image">
     <img src="{% image_url %}" alt="{% name %}">

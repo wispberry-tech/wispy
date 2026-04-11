@@ -1,5 +1,5 @@
 <Component name="Base" sections>
-{% asset "/static/docs.css" type="stylesheet" priority=10 %}
+{% asset "/static/base.css" type="stylesheet" priority=10 %}
 <!DOCTYPE html>
 <html lang="en">
 <head>

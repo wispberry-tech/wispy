@@ -1,4 +1,5 @@
 <Component name="Nav" site_name>
+{% asset "/css/composites/nav/nav.css" type="stylesheet" %}
 {% asset "/js/composites/nav/nav.js" type="script" %}
 
 <nav class="nav" data-nav aria-label="Main navigation">

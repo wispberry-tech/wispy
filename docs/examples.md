@@ -9,20 +9,41 @@ The `examples/blog/` directory contains a complete web application demonstrating
 ```
 examples/blog/
   main.go                                        # Go web app
+  static/
+    base.css                                     # Global styles — resets, layout, utilities
+    tokens.css                                   # Shared design tokens
   templates/
-    base.grov                                    # Root layout component — nav, main, footer, asset placeholders
+    base.grov                                    # Root layout component — declares base.css
     index.grov                                   # Homepage — imports base, lists posts
     post.grov                                    # Post page — imports base, shows single post
     composites/
-      card/card.grov                             # Post card — props: title, summary, href, date; slot: tags
-      nav/nav.grov                               # Navigation bar — props: site_name
-      author-card/author-card.grov               # Author card component
-      breadcrumbs/breadcrumbs.grov               # Breadcrumb navigation
+      card/
+        card.grov                                # Post card — props: title, summary, href, date; slot: tags
+        card.css                                 # Card component styles
+      nav/
+        nav.grov                                 # Navigation bar — props: site_name
+        nav.css                                  # Nav component styles
+        nav.js                                   # Mobile menu toggle
+      author-card/
+        author-card.grov                         # Author card component
+        author-card.css                          # Author card styles
+      breadcrumbs/
+        breadcrumbs.grov                         # Breadcrumb navigation
+        breadcrumbs.css                          # Breadcrumb styles
     primitives/
-      footer/footer.grov                         # Footer — props: year
-      tag-badge/tag-badge.grov                   # Color tag badge — props: label, color
-      button/button.grov                         # Button link — props: label, href, variant
+      footer/
+        footer.grov                              # Footer — props: year
+        footer.css                               # Footer styles
+      tag-badge/
+        tag-badge.grov                           # Color tag badge — props: label, color
+        tag-badge.css                            # Tag badge styles
+      button/
+        button.grov                              # Button link — props: label, href, variant
+        button.css                               # Button styles
+        button.js                                # Button loading state
 ```
+
+Each component co-locates its CSS and JS files. Components declare their own assets via `{% asset %}`, which bubble up through composition and are deduplicated in `RenderResult`.
 
 ### The Go Application
 
@@ -82,7 +103,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 ```html
 <Component name="Base">
-  {% asset "/static/style.css" type="stylesheet" priority="10" %}
+  {% asset "/static/base.css" type="stylesheet" priority=10 %}
+  {% import Nav from "composites/nav" %}
+  {% import Footer from "primitives/footer" %}
   <!DOCTYPE html>
   <html lang="en">
   <head>
@@ -92,10 +115,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
     <!-- HEAD_HOISTED -->
   </head>
   <body>
-    {% import Nav from "composites/nav" %}
     <Nav site_name={site_name} />
     <main class="container">{% slot "content" %}</main>
-    {% import Footer from "primitives/footer" %}
     <Footer year={current_year} />
     <!-- FOOT_ASSETS -->
   </body>
@@ -103,7 +124,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 </Component>
 ```
 
-Every page imports this layout. The base component declares a global stylesheet asset, uses imported components for nav and footer, and provides placeholder comments that the Go layer replaces.
+The base layout declares `base.css` (global resets, layout, utilities) at `priority=10` so it loads before component stylesheets. Each component (Nav, Footer, etc.) declares its own CSS via `{% asset %}` — these bubble up and appear in `HeadHTML()` after the base styles.
+
+The Go server serves co-located component CSS and JS from the template directory:
+
+```go
+r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
+r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
+```
 
 ### Page Templates
 

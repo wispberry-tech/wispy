@@ -1,4 +1,5 @@
 <Component name="Note" message title="">
+  {% asset "/css/macros/admonitions.css" type="stylesheet" %}
   {% set title = title | default("Note") %}
   <div class="admonition admonition-note">
     <strong>{% title %}</strong>
@@ -7,6 +8,7 @@
 </Component>
 
 <Component name="Warning" message title="">
+  {% asset "/css/macros/admonitions.css" type="stylesheet" %}
   {% set title = title | default("Warning") %}
   <div class="admonition admonition-warning">
     <strong>{% title %}</strong>
@@ -15,6 +17,7 @@
 </Component>
 
 <Component name="Tip" message title="">
+  {% asset "/css/macros/admonitions.css" type="stylesheet" %}
   {% set title = title | default("Tip") %}
   <div class="admonition admonition-tip">
     <strong>{% title %}</strong>

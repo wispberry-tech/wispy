@@ -1,4 +1,5 @@
 <Component name="Code" label="" content>
+{% asset "/css/macros/code-example.css" type="stylesheet" %}
 <div class="code-example">
   {% #if label %}
     <div class="code-label">{% label %}</div>

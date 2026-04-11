@@ -1,0 +1,32 @@
+/* Breadcrumbs Component */
+
+.breadcrumb-bar {
+  background: var(--color-dark-secondary);
+  padding: 0.5rem 2rem;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.breadcrumb-bar a {
+  color: var(--color-cream);
+  text-decoration: none;
+}
+
+.breadcrumb-bar a:hover {
+  color: var(--color-primary);
+}
+
+.breadcrumb-bar .crumb-root { color: var(--color-text-muted); }
+.breadcrumb-bar .crumb-sep { color: var(--color-text-muted); }
+.breadcrumb-bar .crumb-section { color: var(--color-cream); }
+.breadcrumb-bar .crumb-active { color: var(--color-primary); }
+
+.breadcrumb-sep {
+  color: var(--color-text-muted);
+}
+
+.breadcrumb-current {
+  color: var(--color-primary);
+}

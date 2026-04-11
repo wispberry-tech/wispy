@@ -476,11 +476,25 @@ func main() {
 	staticDir := filepath.Join(baseDir, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
-	// Serve colocated JS from component directories
-	r.Handle("/js/*", http.StripPrefix("/js/", http.FileServer(http.Dir(templateDir))))
+	// Serve colocated CSS and JS from component directories
+	r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
+	r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
 
 	fmt.Println("Meridian listening on http://localhost:3000")
 	log.Fatal(http.ListenAndServe(":3000", r))
+}
+
+// filteredFileServer serves only files matching the given extension from dir.
+// All other requests get a 404, preventing template source files from being served.
+func filteredFileServer(dir, ext string) http.Handler {
+	fs := http.FileServer(http.Dir(dir))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, ext) {
+			http.NotFound(w, r)
+			return
+		}
+		fs.ServeHTTP(w, r)
+	})
 }
 
 var (

@@ -285,18 +285,45 @@ Examples: cards, navigation bars, post lists.
 
 ### Folder Structure
 
+Each component lives in its own folder alongside its CSS and JS files:
+
 ```
 templates/
   primitives/
-    button/button.grov
-    tag-badge/tag-badge.grov
+    button/
+      button.grov           # Component template
+      button.css            # Component styles
+      button.js             # Component behavior
+    tag-badge/
+      tag-badge.grov
+      tag-badge.css
   composites/
-    card/card.grov
-    nav/nav.grov
+    card/
+      card.grov
+      card.css
+    nav/
+      nav.grov
+      nav.css
+      nav.js
   layouts/
     base.grov
     docs.grov
 ```
+
+### Component Assets
+
+Components declare their own CSS and JS dependencies using `{% asset %}`. Assets bubble up through composition — when a page uses a Card that uses a TagBadge, all assets appear in `RenderResult`, deduplicated by path:
+
+```html
+{# nav.grov #}
+<Component name="Nav" site_name>
+  {% asset "/css/composites/nav/nav.css" type="stylesheet" %}
+  {% asset "/js/composites/nav/nav.js" type="script" %}
+  <nav class="nav">...</nav>
+</Component>
+```
+
+Global styles (resets, layout, utilities) stay in `static/base.css` and are declared with a higher `priority` in the base layout so they load first. Component-specific styles use the default priority (0).
 
 ### Path Resolution
 

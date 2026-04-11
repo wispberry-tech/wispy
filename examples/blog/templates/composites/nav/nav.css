@@ -1,0 +1,113 @@
+/* Nav Component */
+
+.nav {
+  background: var(--color-dark);
+  padding: var(--space-4) var(--space-8);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+}
+
+.nav-brand {
+  color: var(--color-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--transition-base);
+}
+
+.nav-brand:hover,
+.nav-brand:focus-visible {
+  color: #3a8050;
+}
+
+.nav-brand:focus-visible {
+  outline: 2px solid var(--color-cream);
+  outline-offset: 4px;
+}
+
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--color-cream);
+  font-size: var(--text-xl);
+  cursor: pointer;
+  padding: var(--space-2);
+  transition: color var(--transition-base);
+}
+
+.nav-toggle:hover {
+  color: var(--color-primary);
+}
+
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--color-cream);
+  outline-offset: 4px;
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+  flex: 1;
+}
+
+.nav-link {
+  color: var(--color-cream);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  transition: color var(--transition-base);
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  color: var(--color-primary);
+}
+
+.nav-link:focus-visible {
+  outline: 2px solid var(--color-cream);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+/* ── Nav Mobile ────────────────────────– */
+
+@media (max-width: 768px) {
+  .nav {
+    flex-wrap: wrap;
+    padding: var(--space-4);
+  }
+
+  .nav-toggle {
+    display: block;
+  }
+
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    gap: var(--space-4);
+    width: 100%;
+    order: 3;
+    background: var(--color-dark);
+    padding: var(--space-4) 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: var(--space-4);
+  }
+
+  .nav-links-open {
+    display: flex;
+  }
+
+  .nav-link {
+    padding: var(--space-2) 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav {
+    padding: var(--space-3) var(--space-4);
+  }
+}

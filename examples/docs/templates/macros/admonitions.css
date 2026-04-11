@@ -1,0 +1,15 @@
+/* Admonition Components (Note, Warning, Tip) */
+
+.admonition {
+  padding: 12px 16px;
+  border-left: 4px solid;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  margin: 16px 0;
+}
+
+.admonition strong { display: block; }
+.admonition div { margin-top: 4px; }
+
+.admonition-note   { background: var(--color-note-bg);    border-color: var(--color-note-border);    color: var(--color-note-text); }
+.admonition-warning { background: var(--color-warning-bg); border-color: var(--color-warning-border); color: var(--color-warning-text); }
+.admonition-tip     { background: var(--color-tip-bg);     border-color: var(--color-tip-border);     color: var(--color-tip-text); }
