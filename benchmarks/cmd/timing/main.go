@@ -131,10 +131,8 @@ func formatOps(ops float64) string {
 	switch {
 	case ops >= 1_000_000:
 		return fmt.Sprintf("%.1fM", ops/1_000_000)
-	case ops >= 1_000:
-		return fmt.Sprintf("%.1fK", ops/1_000)
 	default:
-		return fmt.Sprintf("%.0f", ops)
+		return fmt.Sprintf("%.1fK", ops/1_000)
 	}
 }
 
