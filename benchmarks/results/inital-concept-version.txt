@@ -1,0 +1,45 @@
+══════════════════════════════════════════════════════════
+  Grove Timing Benchmark — 1000 iterations
+══════════════════════════════════════════════════════════
+
+  Large Page
+  Engine               Avg/render      ops/sec        Total
+  ────────────────── ──────────── ──────────── ────────────
+  Grove                     4.3µs       235.1K        4.3ms
+  HTMLTemplate             12.0µs        83.3K       12.0ms
+  TextTemplate              3.2µs       309.8K        3.2ms
+  Pongo2                    7.4µs       134.4K        7.4ms
+  Jet                       3.0µs       336.6K        3.0ms
+  Liquid                    3.8µs       265.5K        3.8ms
+
+  Large Loop (100 items)
+  Engine               Avg/render      ops/sec        Total
+  ────────────────── ──────────── ──────────── ────────────
+  Grove                   128.4µs         7.8K      128.4ms
+  HTMLTemplate            252.7µs         4.0K      252.7ms
+  TextTemplate             93.3µs        10.7K       93.3ms
+  Pongo2                  112.0µs         8.9K      112.0ms
+  Jet                      77.6µs        12.9K       77.6ms
+  Liquid                  137.6µs         7.3K      137.6ms
+
+  Nested Loops (10x10)
+  Engine               Avg/render      ops/sec        Total
+  ────────────────── ──────────── ──────────── ────────────
+  Grove                   105.5µs         9.5K      105.5ms
+  HTMLTemplate            139.5µs         7.2K      139.5ms
+  TextTemplate             57.5µs        17.4K       57.5ms
+  Pongo2                   78.6µs        12.7K       78.6ms
+  Jet                      49.5µs        20.2K       49.5ms
+  Liquid                  109.3µs         9.1K      109.3ms
+
+  Complex Page
+  Engine               Avg/render      ops/sec        Total
+  ────────────────── ──────────── ──────────── ────────────
+  Grove                   324.1µs         3.1K      324.1ms
+  HTMLTemplate            413.5µs         2.4K      413.5ms
+  TextTemplate            167.4µs         6.0K      167.4ms
+  Pongo2                  259.1µs         3.9K      259.1ms
+  Jet                     160.6µs         6.2K      160.6ms
+  Liquid                  380.8µs         2.6K      380.8ms
+
+══════════════════════════════════════════════════════════

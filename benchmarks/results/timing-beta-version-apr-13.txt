@@ -1,0 +1,56 @@
+══════════════════════════════════════════════════════════
+  Grove Timing Benchmark — 1000 iterations (warmup: 10, chunks: 10)
+══════════════════════════════════════════════════════════
+
+  Results Key:
+  • Avg/render    — average time per render (lower is better)
+  • ops/sec       — renders per second (higher is better)
+  • Min / Max     — fastest and slowest chunk times (indicates variance)
+  • ±StdDev       — standard deviation across chunks (lower is steadier)
+
+
+  Large Page
+  Engine               Avg/render      ops/sec          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                     5.4µs       186.2K        4.3µs       10.9µs        1.9µs
+  HTMLTemplate             11.9µs        83.7K       11.2µs       14.8µs        1.1µs
+  TextTemplate              3.3µs       304.1K        2.8µs        4.4µs        559ns
+  Pongo2                    6.9µs       144.7K        6.2µs        8.3µs        784ns
+  Jet                       3.2µs       316.1K        2.4µs        4.9µs        917ns
+  Liquid                    3.9µs       259.1K        2.9µs        4.6µs        664ns
+  Handlebars                712ns         1.4M        487ns        1.9µs        417ns
+
+  Large Loop (100 items)
+  Engine               Avg/render      ops/sec          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                   134.7µs         7.4K      128.9µs      144.7µs        4.3µs
+  HTMLTemplate            242.0µs         4.1K      227.6µs      267.2µs       13.0µs
+  TextTemplate             89.1µs        11.2K       84.8µs       94.9µs        3.5µs
+  Pongo2                  108.4µs         9.2K      100.0µs      124.4µs        7.2µs
+  Jet                      75.2µs        13.3K       70.9µs       82.0µs        3.2µs
+  Liquid                  137.5µs         7.3K      129.7µs      144.0µs        5.0µs
+  Handlebars                169ns         5.9M        159ns        196ns         13ns
+
+  Nested Loops (10x10)
+  Engine               Avg/render      ops/sec          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                    79.4µs        12.6K       72.6µs       88.4µs        4.0µs
+  HTMLTemplate            138.5µs         7.2K      126.1µs      167.8µs       11.4µs
+  TextTemplate             59.7µs        16.7K       56.1µs       66.5µs        3.4µs
+  Pongo2                   74.0µs        13.5K       67.4µs       84.7µs        4.6µs
+  Jet                      49.4µs        20.3K       45.2µs       56.1µs        3.2µs
+  Liquid                  108.5µs         9.2K      101.8µs      112.9µs        3.4µs
+  Handlebars                264ns         3.8M        156ns        634ns        145ns
+
+  Complex Page
+  Engine               Avg/render      ops/sec          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                   248.0µs         4.0K      237.1µs      260.5µs        6.2µs
+  HTMLTemplate            410.4µs         2.4K      390.0µs      430.9µs       10.7µs
+  TextTemplate            164.5µs         6.1K      157.4µs      169.8µs        3.8µs
+  Pongo2                  274.0µs         3.6K      244.8µs      324.7µs       25.4µs
+  Jet                     165.4µs         6.0K      157.2µs      177.0µs        5.7µs
+  Liquid                  380.1µs         2.6K      365.3µs      392.8µs        9.5µs
+  Handlebars                361ns         2.8M        345ns        400ns         17ns
+
+══════════════════════════════════════════════════════════
