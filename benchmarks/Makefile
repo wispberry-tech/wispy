@@ -1,4 +1,4 @@
-.PHONY: bench compare bench-grove clean
+.PHONY: bench compare bench-grove compare-runs timing clean
 
 BENCH_FLAGS ?= -benchmem -count=6 -timeout=10m
 RESULTS_DIR := results
@@ -24,13 +24,18 @@ compare-runs:
 	@test -n "$(OLD)" -a -n "$(NEW)" || { echo "Usage: make compare-runs OLD=results/bench-old.txt NEW=results/bench-new.txt"; exit 1; }
 	benchstat $(OLD) $(NEW)
 
-# Run only Grove benchmarks for quick regression checks.
+# Run only Grove benchmarks for quick regression checks (uses -bench '/Grove' for efficiency).
 bench-grove:
 	@mkdir -p $(RESULTS_DIR)
-	go test -bench=. -run='^$$' $(BENCH_FLAGS) -benchtime=3s 2>&1 | grep -E '(Benchmark|^ok|^FAIL)' | grep -E '(/Grove|^ok|^FAIL)' | tee $(RESULTS_DIR)/grove-$(TIMESTAMP).txt
+	go test -bench='/Grove' -run='^$$' $(BENCH_FLAGS) -benchtime=3s | tee $(RESULTS_DIR)/grove-$(TIMESTAMP).txt
 	@ln -sf grove-$(TIMESTAMP).txt $(RESULTS_DIR)/grove-latest.txt
 	@echo ""
 	@echo "Results saved to $(RESULTS_DIR)/grove-$(TIMESTAMP).txt"
+
+# Run wall-clock timing benchmarks across all engines (large templates).
+# Use -f to filter by scenario name: make timing FILTER="Large Loop"
+timing:
+	./run-timing.sh
 
 clean:
 	rm -rf $(RESULTS_DIR)
