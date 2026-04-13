@@ -23,6 +23,13 @@ func main() {
 	fmt.Println("══════════════════════════════════════════════════════════")
 	fmt.Printf("  Grove Timing Benchmark — %d iterations (warmup: %d, chunks: %d)\n", *iterations, *warmup, *chunks)
 	fmt.Println("══════════════════════════════════════════════════════════")
+	fmt.Println()
+	fmt.Println("  Results Key:")
+	fmt.Println("  • Avg/render    — average time per render (lower is better)")
+	fmt.Println("  • ops/sec       — renders per second (higher is better)")
+	fmt.Println("  • Min / Max     — fastest and slowest chunk times (indicates variance)")
+	fmt.Println("  • ±StdDev       — standard deviation across chunks (lower is steadier)")
+	fmt.Println()
 
 	for si, sc := range scenarios {
 		if *filter != "" && !strings.Contains(sc.Name, *filter) {
