@@ -2,34 +2,40 @@
 package vm
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"html"
+	"math"
 	"sort"
-	"strings"
 	"sync"
 
 	"github.com/wispberry-tech/grove/internal/compiler"
 	"github.com/wispberry-tech/grove/internal/scope"
 )
 
-// constCache maps compiled bytecode pointers to their pre-compiled Value slices.
-// Since bytecode is immutable after compilation, we convert the untyped constant
-// pool to []Value once and reuse it on every execution.
-var constCache sync.Map // map[*compiler.Bytecode][]Value
-
-// precompileConsts returns a []Value slice for the bytecode's constant pool,
-// caching it so subsequent executions skip the type-switch in fromConst.
-func precompileConsts(bc *compiler.Bytecode) []Value {
-	if cached, ok := constCache.Load(bc); ok {
-		return cached.([]Value)
+// PrecompileConsts converts the untyped constant pool in a Bytecode to a
+// pre-compiled []Value slice stored on the Bytecode itself. This should be
+// called once after compilation (e.g. in engine.compileChecked). Subsequent
+// calls are no-ops if CompiledConsts is already set.
+func PrecompileConsts(bc *compiler.Bytecode) {
+	if bc.CompiledConsts != nil {
+		return
 	}
 	vals := make([]Value, len(bc.Consts))
 	for i, c := range bc.Consts {
 		vals[i] = fromConst(c)
 	}
-	constCache.Store(bc, vals)
-	return vals
+	bc.CompiledConsts = vals
+}
+
+// getCompiledConsts retrieves the pre-compiled constants from a Bytecode,
+// compiling them on the fly if not yet set (e.g. for sub-templates loaded at runtime).
+func getCompiledConsts(bc *compiler.Bytecode) []Value {
+	if bc.CompiledConsts != nil {
+		return bc.CompiledConsts.([]Value)
+	}
+	PrecompileConsts(bc)
+	return bc.CompiledConsts.([]Value)
 }
 
 // renderCtx accumulates page-level data (assets, meta, hoisted HTML, warnings)
@@ -95,7 +101,7 @@ type loopState struct {
 
 // captureFrame holds output redirection state for {% capture %}.
 type captureFrame struct {
-	buf    strings.Builder
+	buf    bytes.Buffer
 	varIdx int // name index for the capture variable
 }
 
@@ -115,22 +121,23 @@ type componentFrame struct {
 
 // VM is a stack-based bytecode executor. Instances are pooled; do not hold references.
 type VM struct {
-	stack      [256]Value
-	sp         int
-	eng        EngineIface
-	sc         *scope.Scope
-	out        strings.Builder
-	loops      [32]loopState
-	loopVars   [32]loopVarData
-	loopScopes [32]*scope.Scope // pre-allocated scopes for loop bodies
-	ldepth     int              // current loop depth (0 = not in loop)
-	captures   [8]captureFrame
-	cdepth     int                             // current capture depth
-	blockSlots map[string][]*compiler.Bytecode // per-render block override table
-	blockChain []blockChainFrame               // current block execution context for super()
-	compStack  [16]componentFrame
-	csdepth    int        // current component stack depth
-	rc         *renderCtx // page-level render context (assets, meta, hoisted)
+	stack        [256]Value
+	sp           int
+	eng          EngineIface
+	sc           *scope.Scope
+	out          bytes.Buffer
+	loops        [32]loopState
+	loopVars     [32]loopVarData
+	ldepth       int // current loop depth (0 = not in loop)
+	captures     [8]captureFrame
+	cdepth       int                             // current capture depth
+	blockSlots   map[string][]*compiler.Bytecode // per-render block override table
+	blockChain   []blockChainFrame               // current block execution context for super()
+	compStack    [16]componentFrame
+	csdepth      int          // current component stack depth
+	rc           *renderCtx   // page-level render context (assets, meta, hoisted)
+	templateName string       // current template name (for error context)
+	globalSc     *scope.Scope // pre-built global scope, reused across sub-renders
 }
 
 var vmPool = sync.Pool{
@@ -139,16 +146,72 @@ var vmPool = sync.Pool{
 	},
 }
 
-// currentWriter returns a pointer to the active output builder.
-func (v *VM) currentWriter() *strings.Builder {
+// newScopeFromGlobal creates a new child scope from the pre-built global scope.
+func (v *VM) newScopeFromGlobal() *scope.Scope {
+	return scope.New(v.globalSc)
+}
+
+// currentWriter returns a pointer to the active output buffer.
+func (v *VM) currentWriter() *bytes.Buffer {
 	if v.cdepth > 0 {
 		return &v.captures[v.cdepth-1].buf
 	}
 	return &v.out
 }
 
+// execSubTemplate handles both OP_INCLUDE and OP_RENDER.
+// isolated=false: include (shares caller scope); isolated=true: render (fresh scope from globals).
+func (v *VM) execSubTemplate(ctx context.Context, tmplName string, pairCount int, isolated bool) error {
+	withVars := make(map[string]any, pairCount)
+	for i := pairCount - 1; i >= 0; i-- {
+		val := v.pop()
+		key := v.pop()
+		withVars[key.String()] = val
+	}
+
+	subBC, err := v.eng.LoadTemplate(tmplName)
+	if err != nil {
+		directive := "include"
+		if isolated {
+			directive = "render"
+		}
+		return &runtimeErr{msg: fmt.Sprintf("%s %q: %v", directive, tmplName, err)}
+	}
+
+	savedSC := v.sc
+	if isolated {
+		renderSc := v.newScopeFromGlobal()
+		for k, raw := range withVars {
+			typedVal, ok := raw.(Value)
+			if !ok {
+				return &runtimeErr{msg: fmt.Sprintf("render %q: internal: expected Value for %q, got %T", tmplName, k, raw)}
+			}
+			renderSc.Set(k, typedVal)
+		}
+		v.sc = renderSc
+	} else if len(withVars) > 0 {
+		v.sc = scope.New(v.sc)
+		for k, raw := range withVars {
+			typedVal, ok := raw.(Value)
+			if !ok {
+				v.sc = savedSC
+				return &runtimeErr{msg: fmt.Sprintf("include %q: internal: expected Value for %q, got %T", tmplName, k, raw)}
+			}
+			v.sc.Set(k, typedVal)
+		}
+	}
+
+	if err := v.run(ctx, subBC); err != nil {
+		v.sc = savedSC
+		return err
+	}
+	v.sc = savedSC
+	return nil
+}
+
 // Execute runs bc with data as the render context and returns an ExecuteResult.
-func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, eng EngineIface) (ExecuteResult, error) {
+// templateName is used for error context; pass "" for inline templates.
+func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, eng EngineIface, templateName string) (ExecuteResult, error) {
 	v := vmPool.Get().(*VM)
 	rc := &renderCtx{
 		seenSrc:     make(map[string]bool),
@@ -171,27 +234,27 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 			v.blockChain = v.blockChain[:0]
 		}
 		v.csdepth = 0
-		for i := range v.loopScopes {
-			v.loopScopes[i] = nil
-		}
 		v.rc = nil
+		v.templateName = ""
+		v.globalSc = nil
 		vmPool.Put(v)
 	}()
 	v.eng = eng
 	v.rc = rc
+	v.templateName = templateName
 	if bc.EstimatedOutputSize > 0 {
 		v.out.Grow(bc.EstimatedOutputSize)
 	}
 
-	globalSc := scope.New(nil)
+	v.globalSc = scope.NewWithCapacity(nil, len(eng.GlobalData()))
 	for k, val := range eng.GlobalData() {
-		globalSc.Set(k, FromAny(val))
+		v.globalSc.Set(k, FromAny(val))
 	}
-	renderSc := scope.New(globalSc)
+	renderSc := scope.NewWithCapacity(v.globalSc, len(data))
 	for k, val := range data {
 		renderSc.Set(k, FromAny(val))
 	}
-	v.sc = scope.New(renderSc)
+	v.sc = scope.NewWithCapacity(renderSc, 4)
 
 	// If this template extends another, build initial block slot table from child's Blocks
 	if bc.Extends != "" {
@@ -202,26 +265,29 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 		}
 	}
 
-	body, err := v.run(ctx, bc)
-	if err != nil {
+	if err := v.run(ctx, bc); err != nil {
+		// Attach template name to runtime errors for debugging context.
+		if re, ok := err.(*runtimeErr); ok && v.templateName != "" {
+			return ExecuteResult{}, &runtimeErr{msg: v.templateName + ": " + re.msg}
+		}
 		return ExecuteResult{}, err
 	}
-	return ExecuteResult{Body: body, RC: rc}, nil
+	return ExecuteResult{Body: v.out.String(), RC: rc}, nil
 }
 
-func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
+func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 	ip := 0
 	instrs := bc.Instrs
-	consts := precompileConsts(bc)
+	consts := getCompiledConsts(bc)
 	done := ctx.Done()
 	opcCount := 0
 	ps := profileInit()
 	for ip < len(instrs) {
 		opcCount++
-		if opcCount&63 == 0 {
+		if opcCount&1023 == 0 {
 			select {
 			case <-done:
-				return "", ctx.Err()
+				return ctx.Err()
 			default:
 			}
 		}
@@ -233,7 +299,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 		switch instr.Op {
 		case compiler.OP_HALT:
 			profileFlush(&ps)
-			return v.out.String(), nil
+			return nil
 
 		case compiler.OP_PUSH_NIL:
 			v.push(Nil)
@@ -246,11 +312,15 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			val, found := v.sc.Get(name)
 			if !found {
 				if v.eng.StrictVariables() {
-					return "", &runtimeErr{msg: fmt.Sprintf("undefined variable %q", name)}
+					return &runtimeErr{msg: fmt.Sprintf("undefined variable %q", name)}
 				}
 				v.push(Nil)
 			} else {
-				v.push(val.(Value))
+				typedVal, ok := val.(Value)
+				if !ok {
+					return &runtimeErr{msg: fmt.Sprintf("internal: expected Value for %q, got %T", name, val)}
+				}
+				v.push(typedVal)
 			}
 
 		case compiler.OP_GET_ATTR:
@@ -258,7 +328,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			name := bc.Names[instr.A]
 			result, err := GetAttr(obj, name, v.eng.StrictVariables())
 			if err != nil {
-				return "", &runtimeErr{msg: err.Error()}
+				return &runtimeErr{msg: err.Error()}
 			}
 			v.push(result)
 
@@ -267,7 +337,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			obj := v.pop()
 			result, err := GetIndex(obj, key)
 			if err != nil {
-				return "", &runtimeErr{msg: err.Error()}
+				return &runtimeErr{msg: err.Error()}
 			}
 			v.push(result)
 
@@ -277,7 +347,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			if val.typ == TypeSafeHTML {
 				w.WriteString(val.sval)
 			} else if val.typ != TypeNil {
-				w.WriteString(html.EscapeString(val.String()))
+				writeHTMLEscaped(w, val.String())
 			}
 
 		case compiler.OP_OUTPUT_RAW:
@@ -300,7 +370,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			b, a := v.pop(), v.pop()
 			result, err := arithDiv(a, b)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(result)
 
@@ -308,7 +378,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			b, a := v.pop(), v.pop()
 			result, err := arithMod(a, b)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(result)
 
@@ -328,7 +398,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			b, a := v.pop(), v.pop()
 			r, err := valCompare(a, b)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(BoolVal(r < 0))
 
@@ -336,7 +406,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			b, a := v.pop(), v.pop()
 			r, err := valCompare(a, b)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(BoolVal(r <= 0))
 
@@ -344,7 +414,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			b, a := v.pop(), v.pop()
 			r, err := valCompare(a, b)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(BoolVal(r > 0))
 
@@ -352,7 +422,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			b, a := v.pop(), v.pop()
 			r, err := valCompare(a, b)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(BoolVal(r >= 0))
 
@@ -391,18 +461,22 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 		case compiler.OP_FILTER:
 			name := bc.Names[instr.A]
 			argc := int(instr.B)
-			args := make([]Value, argc)
+			var argBuf [4]Value
+			args := argBuf[:argc]
+			if argc > len(argBuf) {
+				args = make([]Value, argc)
+			}
 			for i := argc - 1; i >= 0; i-- {
 				args[i] = v.pop()
 			}
 			val := v.pop()
 			fn, ok := v.eng.LookupFilter(name)
 			if !ok {
-				return "", &runtimeErr{msg: fmt.Sprintf("unknown filter %q", name)}
+				return &runtimeErr{msg: fmt.Sprintf("unknown filter %q", name)}
 			}
 			result, err := fn(val, args)
 			if err != nil {
-				return "", &runtimeErr{msg: err.Error()}
+				return &runtimeErr{msg: err.Error()}
 			}
 			v.push(result)
 
@@ -420,7 +494,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 				break
 			}
 			if v.ldepth >= len(v.loops) {
-				return "", &runtimeErr{msg: "for loop nesting too deep (max 32)"}
+				return &runtimeErr{msg: "for loop nesting too deep (max 32)"}
 			}
 			v.loops[v.ldepth] = ls
 			v.ldepth++
@@ -452,7 +526,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 				if v.rc != nil && v.rc.maxLoopIter > 0 {
 					v.rc.loopIter++
 					if v.rc.loopIter > v.rc.maxLoopIter {
-						return "", &runtimeErr{msg: fmt.Sprintf("sandbox: loop iteration limit %d exceeded", v.rc.maxLoopIter)}
+						return &runtimeErr{msg: fmt.Sprintf("sandbox: loop iteration limit %d exceeded", v.rc.maxLoopIter)}
 					}
 				}
 				ip = int(instr.A) // jump back to loop top
@@ -462,7 +536,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 
 		case compiler.OP_CAPTURE_START:
 			if v.cdepth >= len(v.captures) {
-				return "", &runtimeErr{msg: "capture nesting too deep (max 8)"}
+				return &runtimeErr{msg: "capture nesting too deep (max 8)"}
 			}
 			v.captures[v.cdepth].buf.Reset()
 			v.captures[v.cdepth].varIdx = int(instr.A)
@@ -515,7 +589,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			macroVal := v.pop()
 			def, ok := macroVal.AsMacroDef()
 			if !ok {
-				return "", &runtimeErr{msg: "cannot call non-macro value"}
+				return &runtimeErr{msg: "cannot call non-macro value"}
 			}
 
 			// Pop caller body (for OP_CALL_MACRO_CALL)
@@ -526,11 +600,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 
 			// Build macro scope: globals only (macros are isolated)
-			globalSc := scope.New(nil)
-			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, FromAny(val))
-			}
-			macroSc := scope.New(globalSc)
+			macroSc := v.newScopeFromGlobal()
 
 			// Bind params: positional first, named override, defaults for rest
 			for i, param := range def.Params {
@@ -552,90 +622,38 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 
 			result, err := v.execMacro(ctx, def.Body, macroSc)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(SafeHTMLVal(result))
 
 		case compiler.OP_CALL_CALLER:
 			callerRaw, found := v.sc.Get("__caller__")
 			if !found {
-				return "", &runtimeErr{msg: "caller() called outside of a {% call %} block"}
+				return &runtimeErr{msg: "caller() called outside of a {% call %} block"}
 			}
-			callerVal := callerRaw.(Value)
+			callerVal, ok := callerRaw.(Value)
+			if !ok {
+				return &runtimeErr{msg: "caller() called outside of a {% call %} block"}
+			}
 			callerDef, ok := callerVal.AsMacroDef()
 			if !ok {
-				return "", &runtimeErr{msg: "caller() called outside of a {% call %} block"}
+				return &runtimeErr{msg: "caller() called outside of a {% call %} block"}
 			}
 			// Caller body runs in the current scope (not isolated) — so it sees outer vars
 			result, err := v.execMacro(ctx, callerDef.Body, v.sc)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(SafeHTMLVal(result))
 
-		case compiler.OP_INCLUDE:
+		case compiler.OP_INCLUDE, compiler.OP_RENDER:
 			tmplName := bc.Names[instr.A]
 			pairCount := int(instr.B)
+			isolated := instr.Op == compiler.OP_RENDER
 
-			// Pop with-var pairs
-			withVars := make(map[string]any, pairCount)
-			for i := pairCount - 1; i >= 0; i-- {
-				val := v.pop()
-				key := v.pop()
-				withVars[key.String()] = val
+			if err := v.execSubTemplate(ctx, tmplName, pairCount, isolated); err != nil {
+				return err
 			}
-
-			subBC, err := v.eng.LoadTemplate(tmplName)
-			if err != nil {
-				return "", &runtimeErr{msg: fmt.Sprintf("include %q: %v", tmplName, err)}
-			}
-
-			savedSC := v.sc
-			if len(withVars) > 0 {
-				v.sc = scope.New(v.sc)
-				for k, val := range withVars {
-					v.sc.Set(k, val.(Value))
-				}
-			}
-
-			if _, err := v.run(ctx, subBC); err != nil {
-				v.sc = savedSC
-				return "", err
-			}
-			v.sc = savedSC
-
-		case compiler.OP_RENDER:
-			tmplName := bc.Names[instr.A]
-			pairCount := int(instr.B)
-
-			withVars := make(map[string]any, pairCount)
-			for i := pairCount - 1; i >= 0; i-- {
-				val := v.pop()
-				key := v.pop()
-				withVars[key.String()] = val
-			}
-
-			subBC, err := v.eng.LoadTemplate(tmplName)
-			if err != nil {
-				return "", &runtimeErr{msg: fmt.Sprintf("render %q: %v", tmplName, err)}
-			}
-
-			globalSc := scope.New(nil)
-			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, FromAny(val))
-			}
-			renderSc := scope.New(globalSc)
-			for k, val := range withVars {
-				renderSc.Set(k, val.(Value))
-			}
-
-			savedSC := v.sc
-			v.sc = renderSc
-			if _, err := v.run(ctx, subBC); err != nil {
-				v.sc = savedSC
-				return "", err
-			}
-			v.sc = savedSC
 
 		case compiler.OP_IMPORT:
 			tmplName := bc.Names[instr.A]
@@ -643,31 +661,27 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 
 			subBC, err := v.eng.LoadTemplate(tmplName)
 			if err != nil {
-				return "", &runtimeErr{msg: fmt.Sprintf("import %q: %v", tmplName, err)}
+				return &runtimeErr{msg: fmt.Sprintf("import %q: %v", tmplName, err)}
 			}
 
 			// Execute imported template in isolated scope to collect macro definitions
-			globalSc := scope.New(nil)
-			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, FromAny(val))
-			}
-			importSc := scope.New(globalSc)
+			importSc := v.newScopeFromGlobal()
 			savedSC := v.sc
 			v.sc = importSc
 
 			// Redirect output of imported template to a throwaway capture
 			if v.cdepth >= len(v.captures) {
 				v.sc = savedSC
-				return "", &runtimeErr{msg: "import: capture nesting too deep"}
+				return &runtimeErr{msg: "import: capture nesting too deep"}
 			}
 			v.captures[v.cdepth].buf.Reset()
 			v.captures[v.cdepth].varIdx = -1
 			v.cdepth++
-			_, importErr := v.run(ctx, subBC)
+			importErr := v.run(ctx, subBC)
 			v.cdepth--
 			v.sc = savedSC
 			if importErr != nil {
-				return "", importErr
+				return importErr
 			}
 
 			// Collect all MacroVal entries from importSc into a map
@@ -685,7 +699,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			parentName := bc.Names[instr.A]
 			parentBC, err := v.eng.LoadTemplate(parentName)
 			if err != nil {
-				return "", &runtimeErr{msg: fmt.Sprintf("extends %q: %v", parentName, err)}
+				return &runtimeErr{msg: fmt.Sprintf("extends %q: %v", parentName, err)}
 			}
 
 			// Merge parent's block defaults into blockSlots (child entries take priority — don't overwrite)
@@ -699,11 +713,11 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 
 			// Execute the parent's main instruction stream (it will hit OP_BLOCK_RENDER for each slot)
-			if _, err := v.run(ctx, parentBC); err != nil {
-				return "", err
+			if err := v.run(ctx, parentBC); err != nil {
+				return err
 			}
 			// After parent executes, we're done — return to skip remaining instructions in child
-			return v.out.String(), nil
+			return nil
 
 		case compiler.OP_BLOCK_RENDER:
 			blockName := bc.Names[instr.A]
@@ -725,16 +739,16 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			frame := blockChainFrame{name: blockName, depth: 0, bodies: bodies}
 			v.blockChain = append(v.blockChain, frame)
 
-			_, err := v.run(ctx, bodies[0])
+			err := v.run(ctx, bodies[0])
 
 			v.blockChain = v.blockChain[:len(v.blockChain)-1]
 			if err != nil {
-				return "", err
+				return err
 			}
 
 		case compiler.OP_SUPER:
 			if len(v.blockChain) == 0 {
-				return "", &runtimeErr{msg: "super() called outside a block"}
+				return &runtimeErr{msg: "super() called outside a block"}
 			}
 			frame := &v.blockChain[len(v.blockChain)-1]
 			nextDepth := frame.depth + 1
@@ -749,7 +763,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			superResult, err := v.execBlockCapture(ctx, frame.bodies[nextDepth])
 			frame.depth = prevDepth
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.push(SafeHTMLVal(superResult))
 
@@ -770,13 +784,13 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Load component template
 			compBC, err := v.eng.LoadTemplate(compDef.Name)
 			if err != nil {
-				return "", &runtimeErr{msg: fmt.Sprintf("component %q: %v", compDef.Name, err)}
+				return &runtimeErr{msg: fmt.Sprintf("component %q: %v", compDef.Name, err)}
 			}
 
 			// Save caller scope; push component frame
 			callerScope := v.sc
 			if v.csdepth >= len(v.compStack) {
-				return "", &runtimeErr{msg: "component nesting too deep (max 16)"}
+				return &runtimeErr{msg: "component nesting too deep (max 16)"}
 			}
 			v.compStack[v.csdepth] = componentFrame{
 				fills:       compDef.Fills,
@@ -786,24 +800,26 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			v.csdepth++
 
 			// Set up isolated component scope: globals → component scope
-			globalSc := scope.New(nil)
-			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, FromAny(val))
-			}
-			v.sc = scope.New(globalSc)
+			v.sc = v.newScopeFromGlobal()
 
 			// If no {% props %} declaration (permissive mode), bind all props now
 			if compBC.Props == nil {
-				for k, val := range props {
-					v.sc.Set(k, val.(Value))
+				for k, raw := range props {
+					typedVal, ok := raw.(Value)
+					if !ok {
+						v.csdepth--
+						v.sc = callerScope
+						return &runtimeErr{msg: fmt.Sprintf("component: internal: expected Value for prop %q, got %T", k, raw)}
+					}
+					v.sc.Set(k, typedVal)
 				}
 			}
 
-			_, err = v.run(ctx, compBC)
+			err = v.run(ctx, compBC)
 			v.csdepth--
 			v.sc = callerScope
 			if err != nil {
-				return "", err
+				return err
 			}
 
 		case compiler.OP_DYNAMIC_COMPONENT:
@@ -833,13 +849,13 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Load component template
 			compBC, err := v.eng.LoadTemplate(templateName)
 			if err != nil {
-				return "", &runtimeErr{msg: fmt.Sprintf("dynamic component %q: %v", compName, err)}
+				return &runtimeErr{msg: fmt.Sprintf("dynamic component %q: %v", compName, err)}
 			}
 
 			// Save caller scope; push component frame
 			callerScope := v.sc
 			if v.csdepth >= len(v.compStack) {
-				return "", &runtimeErr{msg: "component nesting too deep (max 16)"}
+				return &runtimeErr{msg: "component nesting too deep (max 16)"}
 			}
 			v.compStack[v.csdepth] = componentFrame{
 				fills:       compDef.Fills,
@@ -848,28 +864,30 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 			v.csdepth++
 
-			globalSc := scope.New(nil)
-			for k, val := range v.eng.GlobalData() {
-				globalSc.Set(k, FromAny(val))
-			}
-			v.sc = scope.New(globalSc)
+			v.sc = v.newScopeFromGlobal()
 
 			if compBC.Props == nil {
-				for k, val := range props {
-					v.sc.Set(k, val.(Value))
+				for k, raw := range props {
+					typedVal, ok := raw.(Value)
+					if !ok {
+						v.csdepth--
+						v.sc = callerScope
+						return &runtimeErr{msg: fmt.Sprintf("dynamic component %q: internal: expected Value for prop %q, got %T", compName, k, raw)}
+					}
+					v.sc.Set(k, typedVal)
 				}
 			}
 
-			_, err = v.run(ctx, compBC)
+			err = v.run(ctx, compBC)
 			v.csdepth--
 			v.sc = callerScope
 			if err != nil {
-				return "", err
+				return err
 			}
 
 		case compiler.OP_PROPS_INIT:
 			if v.csdepth == 0 {
-				return "", &runtimeErr{msg: "props declaration outside component context"}
+				return &runtimeErr{msg: "props declaration outside component context"}
 			}
 			frame := &v.compStack[v.csdepth-1]
 			passed := frame.passedProps
@@ -883,17 +901,21 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			// Check for unknown props
 			for k := range passed {
 				if !declaredSet[k] {
-					return "", &runtimeErr{msg: fmt.Sprintf("component: unknown prop %q", k)}
+					return &runtimeErr{msg: fmt.Sprintf("component: unknown prop %q", k)}
 				}
 			}
 			// Bind props: passed value or default; error if required and missing
 			for _, p := range declared {
-				if val, ok := passed[p.Name]; ok {
-					v.sc.Set(p.Name, val.(Value))
+				if raw, ok := passed[p.Name]; ok {
+					typedVal, vok := raw.(Value)
+					if !vok {
+						return &runtimeErr{msg: fmt.Sprintf("component: internal: expected Value for prop %q, got %T", p.Name, raw)}
+					}
+					v.sc.Set(p.Name, typedVal)
 				} else if p.Default != nil {
 					v.sc.Set(p.Name, fromConst(p.Default))
 				} else {
-					return "", &runtimeErr{msg: fmt.Sprintf("component: missing required prop %q", p.Name)}
+					return &runtimeErr{msg: fmt.Sprintf("component: missing required prop %q", p.Name)}
 				}
 			}
 
@@ -917,8 +939,8 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			if v.csdepth == 0 {
 				// Slot used outside a component — render default content only
 				if defaultBlockIdx != 0xFFFF {
-					if _, err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
-						return "", err
+					if err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
+						return err
 					}
 				}
 				break
@@ -951,16 +973,16 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 					}
 				}
 
-				_, err := v.run(ctx, matchedFill.Body)
+				err := v.run(ctx, matchedFill.Body)
 				v.sc = savedSC
 				v.csdepth = savedDepth
 				if err != nil {
-					return "", err
+					return err
 				}
 			} else if defaultBlockIdx != 0xFFFF {
 				// No fill provided — render slot default content
-				if _, err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
-					return "", err
+				if err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
+					return err
 				}
 			}
 			// else: empty slot with no fill and no default — render nothing
@@ -1008,7 +1030,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			hoistBC := bc.Blocks[instr.B].Body
 			captured, err := v.execBlockCapture(ctx, hoistBC)
 			if err != nil {
-				return "", err
+				return err
 			}
 			v.rc.hoisted[target] = append(v.rc.hoisted[target], captured)
 
@@ -1040,10 +1062,10 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			v.push(OrderedMapVal(m))
 
 		default:
-			return "", fmt.Errorf("vm: unknown opcode %d at ip=%d", instr.Op, ip-1)
+			return fmt.Errorf("vm: unknown opcode %d at ip=%d", instr.Op, ip-1)
 		}
 	}
-	return v.out.String(), nil
+	return nil
 }
 
 // execBlockCapture runs a block body bytecode in the current scope, capturing output to a string.
@@ -1056,7 +1078,7 @@ func (v *VM) execBlockCapture(ctx context.Context, bc *compiler.Bytecode) (strin
 	v.captures[v.cdepth].varIdx = -1
 	v.cdepth++
 
-	_, err := v.run(ctx, bc)
+	err := v.run(ctx, bc)
 
 	v.cdepth--
 	if err != nil {
@@ -1077,7 +1099,7 @@ func (v *VM) execMacro(ctx context.Context, bc *compiler.Bytecode, sc *scope.Sco
 	savedSC := v.sc
 	v.sc = sc
 
-	_, err := v.run(ctx, bc)
+	err := v.run(ctx, bc)
 
 	v.sc = savedSC
 	v.cdepth--
@@ -1103,21 +1125,72 @@ func (v *VM) makeLoopState(coll Value) (loopState, bool) {
 			}
 			return loopState{items: vals, keys: keys, isMap: true}, true
 		}
-		m, _ := coll.oval.(map[string]any)
-		keys := make([]string, 0, len(m))
-		for k := range m {
-			keys = append(keys, k)
+		// Pre-converted map[string]Value
+		if m, ok := coll.oval.(map[string]Value); ok {
+			keys := make([]string, 0, len(m))
+			for k := range m {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			vals := make([]Value, len(keys))
+			for i, k := range keys {
+				vals[i] = m[k]
+			}
+			return loopState{items: vals, keys: keys, isMap: true}, true
 		}
-		sort.Strings(keys)
-		vals := make([]Value, len(keys))
-		for i, k := range keys {
-			vals[i] = FromAny(m[k])
+		// Legacy map[string]any
+		if m, ok := coll.oval.(map[string]any); ok {
+			keys := make([]string, 0, len(m))
+			for k := range m {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			vals := make([]Value, len(keys))
+			for i, k := range keys {
+				vals[i] = FromAny(m[k])
+			}
+			return loopState{items: vals, keys: keys, isMap: true}, true
 		}
-		return loopState{items: vals, keys: keys, isMap: true}, true
 	case TypeNil:
 		return loopState{}, false
 	}
 	return loopState{}, false
+}
+
+// htmlSpecial is a lookup table for HTML special characters that need escaping.
+var htmlSpecial [256]bool
+
+func init() {
+	htmlSpecial['<'] = true
+	htmlSpecial['>'] = true
+	htmlSpecial['&'] = true
+	htmlSpecial['"'] = true
+	htmlSpecial['\''] = true
+}
+
+// writeHTMLEscaped writes s to w with HTML special characters escaped.
+// Uses a single-pass byte scan with O(1) character checks via lookup table.
+func writeHTMLEscaped(w *bytes.Buffer, s string) {
+	last := 0
+	for i := 0; i < len(s); i++ {
+		if htmlSpecial[s[i]] {
+			w.WriteString(s[last:i])
+			switch s[i] {
+			case '<':
+				w.WriteString("&lt;")
+			case '>':
+				w.WriteString("&gt;")
+			case '&':
+				w.WriteString("&amp;")
+			case '"':
+				w.WriteString("&#34;")
+			case '\'':
+				w.WriteString("&#39;")
+			}
+			last = i + 1
+		}
+	}
+	w.WriteString(s[last:])
 }
 
 // makeLoopVal constructs the `loop` magic variable without allocation.
@@ -1151,7 +1224,11 @@ func buildRange(args []int64) Value {
 	if step == 0 {
 		return ListVal(nil)
 	}
-	var items []Value
+	n := int((stop - start) / step)
+	if n < 0 {
+		n = 0
+	}
+	items := make([]Value, 0, n)
 	if step > 0 {
 		for i := start; i < stop; i += step {
 			items = append(items, IntVal(i))
@@ -1246,14 +1323,19 @@ func arithDiv(a, b Value) (Value, error) {
 
 func arithMod(a, b Value) (Value, error) {
 	bi, bok := b.ToInt64()
-	if !bok || bi == 0 {
-		bf, _ := b.ToFloat64()
-		if bf == 0 {
+	if bok {
+		if bi == 0 {
 			return Nil, &runtimeErr{msg: "modulo by zero"}
 		}
+		ai, _ := a.ToInt64()
+		return IntVal(ai % bi), nil
 	}
-	ai, _ := a.ToInt64()
-	return IntVal(ai % bi), nil
+	bf, _ := b.ToFloat64()
+	if bf == 0 {
+		return Nil, &runtimeErr{msg: "modulo by zero"}
+	}
+	af, _ := a.ToFloat64()
+	return FloatVal(math.Mod(af, bf)), nil
 }
 
 // ─── Comparison ───────────────────────────────────────────────────────────────

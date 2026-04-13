@@ -96,8 +96,17 @@ func IntVal(n int64) Value                { return Value{typ: TypeInt, ival: n} 
 func FloatVal(f float64) Value            { return Value{typ: TypeFloat, fval: f} }
 func StringVal(s string) Value            { return Value{typ: TypeString, sval: s} }
 func SafeHTMLVal(s string) Value          { return Value{typ: TypeSafeHTML, sval: s} }
-func ListVal(items []Value) Value         { return Value{typ: TypeList, oval: items} }
-func MapVal(m map[string]any) Value       { return Value{typ: TypeMap, oval: m} }
+func ListVal(items []Value) Value { return Value{typ: TypeList, oval: items} }
+
+// MapVal creates a TypeMap Value that stores the raw map[string]any directly.
+// Values are converted from any to Value on each access via MapGetVal.
+func MapVal(m map[string]any) Value {
+	return Value{typ: TypeMap, oval: m}
+}
+
+// ConvertedMapVal creates a TypeMap Value from pre-converted map[string]Value.
+func ConvertedMapVal(m map[string]Value) Value { return Value{typ: TypeMap, oval: m} }
+
 func OrderedMapVal(m *OrderedMap) Value   { return Value{typ: TypeMap, oval: m} }
 func ResolvableVal(r Resolvable) Value    { return Value{typ: TypeResolvable, oval: r} }
 func MacroVal(m *compiler.MacroDef) Value { return Value{typ: TypeMacro, oval: m} }
@@ -158,6 +167,12 @@ func (v Value) AsMap() (map[string]any, bool) {
 		return nil, false
 	}
 	switch m := v.oval.(type) {
+	case map[string]Value:
+		out := make(map[string]any, len(m))
+		for k, v := range m {
+			out[k] = v
+		}
+		return out, true
 	case map[string]any:
 		return m, true
 	case *OrderedMap:
@@ -178,6 +193,8 @@ func (v Value) AsOrderedMap() (*OrderedMap, bool) {
 // MapLen returns the number of entries in a map value.
 func (v Value) MapLen() int {
 	switch m := v.oval.(type) {
+	case map[string]Value:
+		return len(m)
 	case map[string]any:
 		return len(m)
 	case *OrderedMap:
@@ -189,6 +206,9 @@ func (v Value) MapLen() int {
 // MapGet retrieves a value from a map by key, regardless of underlying type.
 func (v Value) MapGet(key string) (any, bool) {
 	switch m := v.oval.(type) {
+	case map[string]Value:
+		val, ok := m[key]
+		return val, ok
 	case map[string]any:
 		val, ok := m[key]
 		return val, ok
@@ -196,6 +216,41 @@ func (v Value) MapGet(key string) (any, bool) {
 		return m.Get(key)
 	}
 	return nil, false
+}
+
+// MapGetVal retrieves a Value from a map by key, regardless of underlying type.
+// For map[string]any, inlines fast-path type checks for common types (string,
+// bool, int, float64) to avoid the overhead of a full FromAny call.
+func (v Value) MapGetVal(key string) (Value, bool) {
+	switch m := v.oval.(type) {
+	case map[string]Value:
+		val, ok := m[key]
+		return val, ok
+	case map[string]any:
+		raw, ok := m[key]
+		if !ok {
+			return Nil, false
+		}
+		// Inline fast-path for common types (~95% of template data).
+		// Avoids FromAny function call overhead for zero-allocation conversions.
+		switch x := raw.(type) {
+		case string:
+			return StringVal(x), true
+		case bool:
+			return BoolVal(x), true
+		case int:
+			return IntVal(int64(x)), true
+		case float64:
+			return FloatVal(x), true
+		}
+		return FromAny(raw), true
+	case *OrderedMap:
+		if val, ok := m.Get(key); ok {
+			return FromAny(val), true
+		}
+		return Nil, false
+	}
+	return Nil, false
 }
 
 // AsMacroDef returns the *compiler.MacroDef and true for TypeMacro, else nil and false.
@@ -354,8 +409,8 @@ func FromAny(v any) Value {
 func GetAttr(obj Value, name string, strict bool) (Value, error) {
 	switch obj.typ {
 	case TypeMap:
-		if v, ok := obj.MapGet(name); ok {
-			return FromAny(v), nil
+		if v, ok := obj.MapGetVal(name); ok {
+			return v, nil  // v is already a Value, no FromAny needed
 		}
 		if strict {
 			return Nil, fmt.Errorf("undefined attribute %q", name)
@@ -422,8 +477,8 @@ func GetIndex(obj, key Value) (Value, error) {
 		return lst[idx], nil
 	case TypeMap:
 		k := key.String()
-		if v, ok := obj.MapGet(k); ok {
-			return FromAny(v), nil
+		if v, ok := obj.MapGetVal(k); ok {
+			return v, nil  // v is already a Value, no FromAny needed
 		}
 		return Nil, nil
 	}
