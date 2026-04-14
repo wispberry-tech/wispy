@@ -47,7 +47,7 @@ Grove templates use a single `{% %}` delimiter for server operations (control fl
 
 <Base>
   {% #fill "content" %}
-    {% asset "/css/composites/card/card.css" type="stylesheet" %}
+    {% asset "composites/card/card.css" type="stylesheet" %}
     {% meta name="description" content="Latest posts" %}
 
     <h1>{% title | upper %}</h1>
@@ -69,7 +69,7 @@ Grove templates use a single `{% %}` delimiter for server operations (control fl
 
 ### Components
 
-Components are defined with `<Component>`, imported with `{% import %}`, and composed using slots and fills. Each component co-locates its own CSS and JS assets alongside the `.grov` file — assets declared inside a component automatically bubble up through `RenderResult` so the host page can collect them.
+Components are `.grov` files, imported with `{% import %}`, and composed using slots and fills. Each component co-locates its own CSS and JS assets alongside the `.grov` file — assets declared inside a component automatically bubble up through `RenderResult` so the host page can collect them.
 
 **File structure** — components live in named directories with their assets alongside them:
 
@@ -79,37 +79,34 @@ templates/
 ├── index.grov                         # page (imports components)
 ├── composites/
 │   └── card/
-│       ├── card.grov                  # component definition
+│       ├── card.grov                  # component template
 │       └── card.css                   # co-located styles
 └── primitives/
     └── button/
-        ├── button.grov                # component definition
+        ├── button.grov                # component template
         ├── button.css                 # co-located styles
         └── button.js                  # co-located script
 ```
 
-**Defining a component** (`primitives/button/button.grov`):
+**Defining a component** (`primitives/button/button.grov`) — the file body IS the component:
 
 ```html
-<Component name="Button" label href="#" variant="primary" type="link">
-{% asset "/css/primitives/button/button.css" type="stylesheet" %}
-{% asset "/js/primitives/button/button.js" type="script" %}
+{% asset "primitives/button/button.css" type="stylesheet" %}
+{% asset "primitives/button/button.js" type="script" %}
 
 {% #if type == "link" %}
   <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>
 {% :else %}
   <button type="{% type %}" class="btn btn-{% variant %}" data-button>{% label %}</button>
 {% /if %}
-</Component>
 ```
 
-Props are declared as attributes on `<Component>`. Trailing values are defaults (`variant="primary"`); bare names are required (`label`). The `{% asset %}` tags declare that this component needs its own CSS and JS — no matter how deeply nested the component is, those assets bubble up to the final `RenderResult`.
+Any attribute passed when invoking the component becomes a template variable. The `{% asset %}` tags declare that this component needs its own CSS and JS — no matter how deeply nested the component is, those assets bubble up to the final `RenderResult`.
 
 **A component with named slots** (`composites/card/card.grov`):
 
 ```html
-<Component name="Card" title summary href="#" date="" author_name="">
-{% asset "/css/composites/card/card.css" type="stylesheet" %}
+{% asset "composites/card/card.css" type="stylesheet" %}
 <article class="card">
   <h2 class="card-title"><a href="{% href %}">{% title %}</a></h2>
   <p class="card-summary">{% summary | truncate(150) %}</p>
@@ -117,7 +114,6 @@ Props are declared as attributes on `<Component>`. Trailing values are defaults 
     {% #slot "tags" %}{% /slot %}
   </div>
 </article>
-</Component>
 ```
 
 **Importing and using components** from a page template:
@@ -148,6 +144,45 @@ Props are declared as attributes on `<Component>`. Trailing values are defaults 
 
 Props are passed with `{expr}` syntax. Fills inject content into named slots — and fills always see the **caller's** scope, not the component's. Every `{% asset %}` declared by `Card`, `TagBadge`, `Base`, or any other component in the tree is deduplicated and available on the `RenderResult` via `result.HeadHTML()` (stylesheets) and `result.FootHTML()` (scripts).
 
+### Asset Pipeline (optional)
+
+The `{% asset %}` tags above use *logical names* — relative paths that the
+engine rewrites through a pluggable resolver. Wire up `pkg/grove/assets` to
+get content-hashed, minified URLs with one manifest-driven mapping:
+
+```go
+import (
+    "github.com/wispberry-tech/grove/pkg/grove"
+    "github.com/wispberry-tech/grove/pkg/grove/assets"
+    "github.com/wispberry-tech/grove/pkg/grove/assets/minify"
+)
+
+builder := assets.NewWithDefaults(assets.Config{
+    SourceDir:      "templates",
+    OutputDir:      "dist",
+    URLPrefix:      "/dist",
+    CSSTransformer: minify.New(),
+    JSTransformer:  minify.New(),
+    ManifestPath:   "dist/manifest.json",
+})
+manifest, _ := builder.Build()
+
+eng := grove.New(
+    grove.WithStore(grove.NewFileSystemStore("templates")),
+    grove.WithAssetResolver(manifest.Resolve),
+)
+
+// Serve hashed files with Cache-Control: immutable.
+pattern, handler := builder.Route()
+mux.Handle(pattern+"*", handler)
+```
+
+With the resolver wired, `{% asset "primitives/button/button.css" %}` renders
+as `/dist/primitives/button/button.<hash>.css`. Drop the resolver and the
+same tag passes through unchanged — the pipeline is fully opt-in and adds
+no overhead when absent. See [Asset Pipeline](docs/asset-pipeline.md) for
+watch mode, pruning, custom transformers, and the HTTP handler API.
+
 ### Syntax at a Glance
 
 | Category | Syntax |
@@ -177,10 +212,11 @@ Props are passed with `{expr}` syntax. Fills inject content into named slots —
 | Feature | Description |
 |---------|-------------|
 | **Bytecode compilation** | Templates compile to bytecode and run on a stack-based VM. Compiled bytecode is immutable and shared across goroutines. |
-| **Components** | `<Component>` definitions with props, `{% slot %}`, and `{% #fill %}`. Fills see the caller's scope, not the component's. Scoped slots pass data back to callers. |
+| **Components** | File-per-component: each `.grov` file is a component. Invoke with `<ComponentName>`, import with `{% import %}`. Slots/fills for composition. Scoped slots pass data back to callers. |
 | **Layouts** | Layouts are components with named slots — no special inheritance system. Compose layouts to any depth. |
 | **Imports** | `{% import %}` brings components into scope. |
 | **Web primitives** | `{% asset %}`, `{% meta %}`, and `{% #hoist %}` collect resources during rendering. Components declare their own CSS/JS assets, which bubble up through composition. `RenderResult` returns them for assembly into the final HTML response. |
+| **Asset pipeline** | Optional `pkg/grove/assets` package builds a content-hashed, minified `dist/` from colocated CSS/JS, exposes a `Manifest`, and plugs into the engine via `WithAssetResolver`. Includes an HTTP handler with immutable caching, watch mode, and an optional `minify` sub-package. |
 | **Auto-escaping** | HTML output is escaped by default. `safe` filter and `{% #verbatim %}` blocks bypass it for trusted content. |
 | **Sandboxing** | Restrict allowed tags, filters, and loop iterations per engine. |
 
@@ -193,5 +229,6 @@ Full documentation is in the [`docs/`](docs/index.md) directory:
 - [Components](docs/components.md) — definitions, imports, props, slots, fills, layouts
 - [Filters](docs/filters.md) — all 42 built-in filters
 - [Web Primitives](docs/web-primitives.md) — ImportAsset, SetMeta, Hoist, RenderResult
+- [Asset Pipeline](docs/asset-pipeline.md) — Builder, Manifest, resolver, minify, watch mode
 - [API Reference](docs/api-reference.md) — Go types, methods, and configuration
-- [Examples](docs/examples.md) — blog app walkthrough
+- [Examples](docs/examples.md) — blog/store/docs/email walkthroughs

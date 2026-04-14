@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	grove "github.com/wispberry-tech/grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove/assets"
+	"github.com/wispberry-tech/grove/pkg/grove/assets/minify"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -606,8 +608,26 @@ func main() {
 	loadData(baseDir)
 
 	templateDir := filepath.Join(baseDir, "templates")
+	distDir := filepath.Join(baseDir, "dist")
+
+	builder := assets.NewWithDefaults(assets.Config{
+		SourceDir:      templateDir,
+		OutputDir:      distDir,
+		URLPrefix:      "/dist",
+		CSSTransformer: minify.New(),
+		JSTransformer:  minify.New(),
+		ManifestPath:   filepath.Join(distDir, "manifest.json"),
+	})
+	manifest, err := builder.Build()
+	if err != nil {
+		log.Fatalf("asset build failed: %v", err)
+	}
+
 	store := grove.NewFileSystemStore(templateDir)
-	eng := grove.New(grove.WithStore(store))
+	eng := grove.New(
+		grove.WithStore(store),
+		grove.WithAssetResolver(manifest.Resolve),
+	)
 	eng.SetGlobal("site_name", "Coldfront Supply Co.")
 	eng.SetGlobal("current_year", "2026")
 
@@ -634,26 +654,13 @@ func main() {
 	staticDir := filepath.Join(baseDir, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
-	// Serve colocated CSS and JS from component directories
-	r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
-	r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
+	// Asset pipeline — serves hashed, minified CSS/JS from dist/.
+	distPattern, distHandler := builder.Route()
+	r.Handle(distPattern+"*", distHandler)
 
 	port := getPort()
 	fmt.Printf("Coldfront Supply Co. listening on http://localhost%s\n", port)
 	log.Fatal(http.ListenAndServe(port, r))
-}
-
-// filteredFileServer serves only files matching the given extension from dir.
-// All other requests get a 404, preventing template source files from being served.
-func filteredFileServer(dir, ext string) http.Handler {
-	fs := http.FileServer(http.Dir(dir))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ext) {
-			http.NotFound(w, r)
-			return
-		}
-		fs.ServeHTTP(w, r)
-	})
 }
 
 var (
