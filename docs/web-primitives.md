@@ -32,31 +32,66 @@ Components declare their own CSS and JS dependencies. When a page renders compon
 
 ```html
 {# composites/nav/nav.grov #}
-<Component name="Nav" site_name>
-  {% asset "/css/composites/nav/nav.css" type="stylesheet" %}
-  {% asset "/js/composites/nav/nav.js" type="script" %}
-  <nav class="nav">...</nav>
-</Component>
+{% asset "composites/nav/nav.css" type="stylesheet" %}
+{% asset "composites/nav/nav.js" type="script" %}
+<nav class="nav">...</nav>
 ```
 
-Global styles (resets, layout, utilities) live in `static/base.css` and are declared with higher priority in the base layout so they load first:
+These are **logical names** — paths relative to your template root. Global
+styles that live outside the template tree can still use URL-style paths; they
+pass through unchanged when no manifest entry matches:
 
 ```html
 {# base.grov #}
-<Component name="Base">
-  {% asset "/static/base.css" type="stylesheet" priority=10 %}
-  ...
-</Component>
+{% asset "/static/base.css" type="stylesheet" priority=10 %}
+...
 ```
 
 Component assets use the default priority (0), which means `HeadHTML()` outputs `base.css` before component stylesheets — preserving the correct cascade order.
 
-The Go application serves co-located files from the template directory using a filtered handler that only serves `.css` and `.js` files (not `.grov` source):
+### Asset resolution
+
+The engine resolves every `{% asset %}` `src` through a pluggable
+`AssetResolver` function before storing the asset on `RenderResult`:
 
 ```go
-r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
-r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
+type AssetResolver func(logicalName string) (string, bool)
 ```
+
+With no resolver configured (the default), the `src` is stored verbatim.
+Configure one with `grove.WithAssetResolver(r)` at engine construction or
+`engine.SetAssetResolver(r)` at runtime (atomic; safe against concurrent
+renders).
+
+The typical resolver comes from the optional asset pipeline in
+`pkg/grove/assets`, which builds content-hashed output and produces a
+`Manifest` whose `.Resolve` method satisfies `AssetResolver`:
+
+```go
+builder := assets.NewWithDefaults(assets.Config{
+    SourceDir: "templates",
+    OutputDir: "dist",
+    URLPrefix: "/dist",
+})
+manifest, _ := builder.Build()
+
+eng := grove.New(
+    grove.WithStore(grove.NewFileSystemStore("templates")),
+    grove.WithAssetResolver(manifest.Resolve),
+)
+
+pattern, handler := builder.Route()
+mux.Handle(pattern+"*", handler)
+```
+
+With the pipeline wired, `composites/nav/nav.css` in the template above is
+rewritten to `/dist/composites/nav/nav.<hash>.css` at render time. See the
+[Asset Pipeline](asset-pipeline.md) page for watch mode, pruning, custom
+transformers, and the HTTP handler API.
+
+If you aren't using the pipeline, serve your static files however you like —
+Grove's `{% asset %}` just records strings; making them load is your
+application's job.
 
 ## meta
 
@@ -191,19 +226,17 @@ The base layout component uses placeholder comments that get replaced:
 
 ```html
 {# base.grov #}
-<Component name="Base">
-  {% asset "/static/base.css" type="stylesheet" priority=10 %}
-  <head>
-    <title>{% #slot "title" %}My Site{% /slot %}</title>
-    <!-- HEAD_ASSETS -->
-    <!-- HEAD_META -->
-    <!-- HEAD_HOISTED -->
-  </head>
-  <body>
-    {% slot "content" %}
-    <!-- FOOT_ASSETS -->
-  </body>
-</Component>
+{% asset "/static/base.css" type="stylesheet" priority=10 %}
+<head>
+  <title>{% #slot "title" %}My Site{% /slot %}</title>
+  <!-- HEAD_ASSETS -->
+  <!-- HEAD_META -->
+  <!-- HEAD_HOISTED -->
+</head>
+<body>
+  {% slot "content" %}
+  <!-- FOOT_ASSETS -->
+</body>
 ```
 
 This pattern keeps template authors and application developers in their own domains — templates declare what they need, and the Go layer assembles it. Global styles load via the base layout, while component-specific styles are co-located with each component and collected automatically during rendering.

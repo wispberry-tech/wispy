@@ -21,12 +21,10 @@ In Grove's HTML-centric syntax, macros, includes, and imports are all replaced b
 **After:**
 ```html
 {# user-card.grov #}
-<Component name="UserCard" name role="member">
-  <div class="card">
-    <strong>{% name %}</strong>
-    <span class="role">{% role %}</span>
-  </div>
-</Component>
+<div class="card">
+  <strong>{% name %}</strong>
+  <span class="role">{% role %}</span>
+</div>
 
 {# page.grov #}
 {% import UserCard from "user-card" %}
@@ -52,20 +50,6 @@ In Grove's HTML-centric syntax, macros, includes, and imports are all replaced b
 
 All components have isolated scope — there is no shared-scope include. Pass data explicitly via props.
 
-### Import namespace → Wildcard import
-
-**Before (legacy):**
-```
-{% import "macros/ui.grov" as ui %}
-{{ ui.user_card("Alice") }}
-```
-
-**After:**
-```html
-{% import * from "macros/ui" as UI %}
-<UI.UserCard name="Alice" />
-```
-
 ### call/caller → Slots
 
 **Before (legacy):**
@@ -85,12 +69,10 @@ All components have isolated scope — there is no shared-scope include. Pass da
 **After:**
 ```html
 {# card.grov #}
-<Component name="Card" title>
-  <div class="card">
-    <h2>{% title %}</h2>
-    {% slot %}
-  </div>
-</Component>
+<div class="card">
+  <h2>{% title %}</h2>
+  {% slot %}
+</div>
 
 {# page.grov #}
 {% import Card from "card" %}

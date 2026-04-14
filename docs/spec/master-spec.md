@@ -1118,14 +1118,17 @@ Layouts compose naturally — a layout component can itself use another layout c
 ### Asset Declaration
 
 ```
-{% asset "/css/app.css" type="stylesheet" %}
-{% asset "/js/app.js" type="script" defer %}
+{% asset "composites/nav/nav.css" type="stylesheet" %}
+{% asset "composites/nav/nav.js" type="script" defer %}
 ```
 
-- Assets are collected into `RenderResult.Assets`
-- Deduplicated by `Src` — identical declarations silently dropped
-- `Priority` attribute controls ordering within type groups (higher = earlier)
-- Supports boolean attributes (`defer`, `async`) stored as key→"" in Attrs
+- The `src` argument is a logical name. At render time, the engine resolves
+  it through a configured `AssetResolver` (see §22) and stores the resolved
+  URL on the asset; if no resolver is set, the name passes through unchanged.
+- Deduplication uses the **resolved** `src` — two logical names that resolve
+  to the same URL collapse to one asset.
+- `Priority` attribute controls ordering within type groups (higher = earlier).
+- Supports boolean attributes (`defer`, `async`) stored as key→"" in Attrs.
 
 ### Asset Output Helpers
 
@@ -1133,6 +1136,20 @@ Layouts compose naturally — a layout component can itself use another layout c
 result.HeadHTML()  // <link rel="stylesheet"> tags for stylesheet assets
 result.FootHTML()  // <script> tags for script assets
 ```
+
+### Asset Resolution
+
+The engine accepts a pluggable resolver of type
+`grove.AssetResolver = func(logicalName string) (string, bool)`. Configure
+it via `grove.WithAssetResolver` at construction or swap it at runtime with
+`(*Engine).SetAssetResolver` (atomic; safe against concurrent renders).
+`(*Engine).ReferencedAssets` exposes the set of logical names seen during
+rendering, for prune passes.
+
+The optional sibling package `pkg/grove/assets` provides a `Builder` +
+`Manifest` that implement this resolver over a content-hashed, minified
+`dist/` directory. Importing it is opt-in; the core engine never imports
+it. See [`spec/asset-pipeline.md`](../../spec/asset-pipeline.md).
 
 ### Metadata
 
@@ -1308,6 +1325,7 @@ bc, err := eng.LoadTemplate("page.grov")
 | `WithStrictVariables(bool)` | `false` | Error on undefined variable access |
 | `WithCacheSize(n)` | `512` | LRU cache capacity |
 | `WithSandbox(cfg)` | `nil` | Sandbox restrictions |
+| `WithAssetResolver(r)` | `nil` | Logical-name → URL mapping for `{% asset %}`. See §18 and `spec/asset-pipeline.md` |
 
 ### Data
 
@@ -1342,6 +1360,30 @@ type Asset struct {
     Priority int
 }
 ```
+
+### Asset Resolver
+
+```go
+type AssetResolver = func(logicalName string) (string, bool)
+```
+
+Engine methods: `SetAssetResolver(r)`, `AssetResolver() AssetResolver`,
+`RecordAssetRef(name)`, `ReferencedAssets() map[string]struct{}`,
+`ResetReferencedAssets()`.
+
+### Asset Pipeline (`pkg/grove/assets`)
+
+Optional sibling package. See `docs/asset-pipeline.md` for usage and
+`spec/asset-pipeline.md` for design. Surface:
+
+- `Config`, `Builder`, `New`, `NewWithDefaults`
+- `(*Builder).Build`, `.Watch`, `.Handler`, `.Route`, `.SetReferencedNameProvider`, `.Config`
+- `Manifest`, `NewManifest`, `LoadManifest`, `(*Manifest).Resolve`, `.Entries`, `.Sources`, `.Stats`, `.Set`, `.SetSource`, `.SetStats`, `.Delete`, `.Save`
+- `Transformer`, `NoopTransformer`
+- `WatchHandlers{OnChange, OnError, OnEvent}`, `Event`, `EventType`, `BuildStats`
+
+Optional `pkg/grove/assets/minify` sub-package provides a `MinifyTransformer`
+backed by `tdewolff/minify/v2`.
 
 ### Filter Types
 

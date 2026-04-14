@@ -10,18 +10,16 @@ Define a layout as a component:
 
 ```html
 {# base.grov #}
-<Component name="Base">
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <title>{% #slot "title" %}My Site{% /slot %}</title>
-  </head>
-  <body>
-    <main>{% slot "content" %}</main>
-    <footer>{% #slot "footer" %}&copy; 2026{% /slot %}</footer>
-  </body>
-  </html>
-</Component>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% #slot "title" %}My Site{% /slot %}</title>
+</head>
+<body>
+  <main>{% slot "content" %}</main>
+  <footer>{% #slot "footer" %}&copy; 2026{% /slot %}</footer>
+</body>
+</html>
 ```
 
 Pages import and fill slots:
@@ -44,15 +42,13 @@ Layouts can compose other layouts:
 ```html
 {# section.grov #}
 {% import Base from "base" %}
-<Component name="Section">
-  <Base>
-    {% #fill "content" %}
-      <div class="section">
-        {% #slot "inner" %}section default{% /slot %}
-      </div>
-    {% /fill %}
-  </Base>
-</Component>
+<Base>
+  {% #fill "content" %}
+    <div class="section">
+      {% #slot "inner" %}section default{% /slot %}
+    </div>
+  {% /fill %}
+</Base>
 ```
 
 ```html

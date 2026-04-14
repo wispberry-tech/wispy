@@ -60,7 +60,7 @@ Registers a custom filter. `fn` can be a `FilterFn` or a `*FilterDef` (created w
 func WithStore(s store.Store) Option
 ```
 
-Sets the template store used by `Render`, `{% import %}`, and `<Component>`.
+Sets the template store used by `Render` and `{% import %}`.
 
 ```go
 func WithStrictVariables(strict bool) Option
@@ -79,6 +79,13 @@ func WithSandbox(cfg SandboxConfig) Option
 ```
 
 Applies security restrictions to all templates rendered by this engine.
+
+```go
+func WithAssetResolver(r AssetResolver) Option
+```
+
+Installs a resolver called at render time for every `{% asset %}` tag.
+See [Asset Pipeline](#asset-pipeline) below.
 
 ## SandboxConfig
 
@@ -162,7 +169,7 @@ Adds or updates a template.
 
 ```go
 store := grove.NewMemoryStore()
-store.Set("base.grov", `<Component name="Base"><html>{% slot %}</html></Component>`)
+store.Set("base.grov", `<html>{% slot %}</html>`)
 store.Set("page.grov", `{% import Base from "base" %}<Base>Hello</Base>`)
 ```
 
@@ -197,6 +204,83 @@ type RenderResult struct {
 ```
 
 See [Web Primitives](web-primitives.md) for detailed documentation on `RenderResult`, `Asset`, `Warning`, and the helper methods `HeadHTML()`, `FootHTML()`, and `GetHoisted()`.
+
+## Asset Pipeline
+
+```go
+type AssetResolver func(logicalName string) (string, bool)
+```
+
+Maps a logical asset name (the `src` argument of `{% asset %}`) to a served
+URL. Returning `("", false)` causes the engine to fall through to the original
+name. A nil resolver is treated as passthrough.
+
+### Engine methods
+
+```go
+func (e *Engine) SetAssetResolver(r AssetResolver)
+func (e *Engine) AssetResolver() AssetResolver
+func (e *Engine) RecordAssetRef(logicalName string)
+func (e *Engine) ReferencedAssets() map[string]struct{}
+func (e *Engine) ResetReferencedAssets()
+```
+
+- `SetAssetResolver` is an atomic swap — safe to call from any goroutine
+  while concurrent renders are in flight. Used by watch mode to update the
+  active manifest without a restart.
+- `AssetResolver` returns the current resolver, or `nil` when unused.
+- `RecordAssetRef` is called by the VM during OP_ASSET; the engine stores
+  the logical name in a lazy set (allocated only when a resolver is
+  configured).
+- `ReferencedAssets` returns a snapshot of that set for pruning or debugging.
+- `ResetReferencedAssets` clears the set — typically between prune windows.
+
+### Sibling package: `pkg/grove/assets`
+
+```go
+import "github.com/wispberry-tech/grove/pkg/grove/assets"
+```
+
+| Symbol | Purpose |
+|--------|---------|
+| `Config` | Builder configuration: `SourceDir`, `OutputDir`, `URLPrefix`, `Extensions`, `HashFiles`, `CSSTransformer`, `JSTransformer`, `ManifestPath`, `EmitSourceMaps`, `IncludeBuildStats`, `PruneUnreferenced` |
+| `New(cfg Config) *Builder` | Construct without filling defaults |
+| `NewWithDefaults(cfg Config) *Builder` | Construct with sane defaults for empty fields |
+| `(*Builder).Build() (*Manifest, error)` | One-shot build; serialized via internal mutex |
+| `(*Builder).Watch(ctx, WatchHandlers) error` | Initial build + polling watcher |
+| `(*Builder).Handler() http.Handler` | Path-safe file server for `OutputDir` |
+| `(*Builder).Route() (pattern string, h http.Handler)` | Pre-wrapped with `http.StripPrefix` |
+| `(*Builder).SetReferencedNameProvider(func() map[string]struct{})` | Wire in `Engine.ReferencedAssets` for pruning |
+| `(*Builder).Config() Config` | Read back the builder's config |
+| `Transformer` | `Transform(src []byte, mediaType string) ([]byte, error)` |
+| `NoopTransformer` | Passthrough `Transformer` |
+| `Manifest` | Logical-to-URL map with concurrent-safe reads |
+| `(*Manifest).Resolve(string) (string, bool)` | Satisfies `AssetResolver` via method value |
+| `(*Manifest).Entries() map[string]string` | Copy of the canonical map |
+| `(*Manifest).Sources()` / `.Stats()` | Optional sibling data |
+| `(*Manifest).Set`, `.SetSource`, `.SetStats`, `.Delete` | Mutation API for hand-assembled manifests |
+| `(*Manifest).Save(path string) error` | Atomic write (temp + rename) |
+| `LoadManifest(path string) (*Manifest, error)` | Auto-detects structured + legacy bare-map formats |
+| `BuildStats` | `{DurationMs, InputBytes, OutputBytes, Ratio}` |
+| `WatchHandlers` | `{OnChange, OnError, OnEvent}` |
+| `Event`, `EventType` | `EventDiscovered`, `EventBuilt`, `EventSkipped`, `EventPruned`, `EventError` |
+
+### Optional sub-package: `pkg/grove/assets/minify`
+
+```go
+import "github.com/wispberry-tech/grove/pkg/grove/assets/minify"
+```
+
+| Symbol | Purpose |
+|--------|---------|
+| `New() *MinifyTransformer` | Construct (registers `text/css` + `application/javascript` minifiers) |
+| `(*MinifyTransformer).Transform([]byte, string) ([]byte, error)` | Satisfies `assets.Transformer` |
+
+This sub-package pulls in `github.com/tdewolff/minify/v2`. The core
+`pkg/grove/assets` package has no external dependencies.
+
+See [Asset Pipeline](asset-pipeline.md) for usage guides, watch mode, and
+pruning semantics.
 
 ## Filter Types
 

@@ -1,228 +1,187 @@
 # Examples
 
-## Blog Application
+The `examples/` directory contains four complete apps. See
+[`examples/README.md`](../examples/README.md) for the high-level tour and
+per-example README files for design notes.
 
-The `examples/blog/` directory contains a complete web application demonstrating Grove's features. It's a blog with posts, tags, components, layout composition, and asset collection.
+| Example | Port | Uses asset pipeline | Notable features |
+|---------|------|---------------------|------------------|
+| [blog](../examples/blog)   | 3000 | ✅ | Component composition, slots, `safe`-filtered HTML body |
+| [store](../examples/store) | 3001 | ✅ | Custom `currency` filter, filtering/sort via query params |
+| [docs](../examples/docs)   | 3002 | ✅ | Sandbox config, sidebar + breadcrumbs, macros |
+| [email](../examples/email) | 3003 | ❌ (inline styles) | `{% #hoist %}` preheaders, MSO-safe HTML |
 
-### Project Structure
+```bash
+go run ./examples/blog
+go run ./examples/store
+go run ./examples/docs
+go run ./examples/email
+```
+
+---
+
+## Blog (reference)
+
+`examples/blog/` is the canonical Grove integration. It's the smallest example
+with every feature wired up.
+
+### Project structure
 
 ```
 examples/blog/
-  main.go                                        # Go web app
-  static/
-    base.css                                     # Global styles — resets, layout, utilities
-    tokens.css                                   # Shared design tokens
-  templates/
-    base.grov                                    # Root layout component — declares base.css
-    index.grov                                   # Homepage — imports base, lists posts
-    post.grov                                    # Post page — imports base, shows single post
-    composites/
-      card/
-        card.grov                                # Post card — props: title, summary, href, date; slot: tags
-        card.css                                 # Card component styles
-      nav/
-        nav.grov                                 # Navigation bar — props: site_name
-        nav.css                                  # Nav component styles
-        nav.js                                   # Mobile menu toggle
-      author-card/
-        author-card.grov                         # Author card component
-        author-card.css                          # Author card styles
-      breadcrumbs/
-        breadcrumbs.grov                         # Breadcrumb navigation
-        breadcrumbs.css                          # Breadcrumb styles
-    primitives/
-      footer/
-        footer.grov                              # Footer — props: year
-        footer.css                               # Footer styles
-      tag-badge/
-        tag-badge.grov                           # Color tag badge — props: label, color
-        tag-badge.css                            # Tag badge styles
-      button/
-        button.grov                              # Button link — props: label, href, variant
-        button.css                               # Button styles
-        button.js                                # Button loading state
+├── main.go
+├── data/                           JSON fixtures: authors, tags, posts
+├── dist/                           Generated: hashed CSS/JS + manifest.json
+├── static/
+│   ├── base.css                    Hand-managed global styles
+│   └── tokens.css
+└── templates/
+    ├── base.grov                   Root layout with slots
+    ├── index.grov                  Homepage
+    ├── post.grov                   Single post page
+    ├── composites/
+    │   ├── card/{card.grov,card.css}
+    │   ├── nav/{nav.grov,nav.css,nav.js}
+    │   ├── author-card/...
+    │   └── breadcrumbs/...
+    └── primitives/
+        ├── footer/{footer.grov,footer.css}
+        ├── tag-badge/{tag-badge.grov,tag-badge.css}
+        └── button/{button.grov,button.css,button.js}
 ```
 
-Each component co-locates its CSS and JS files. Components declare their own assets via `{% asset %}`, which bubble up through composition and are deduplicated in `RenderResult`.
+Each component co-locates its CSS / JS. The builder (see below) walks
+`templates/`, hashes + minifies every `.css` / `.js`, and writes them to
+`dist/` with a manifest.
 
-### The Go Application
-
-`main.go` sets up a Grove engine with a filesystem store and global variables:
+### The Go application
 
 ```go
+builder := assets.NewWithDefaults(assets.Config{
+    SourceDir:      templateDir,
+    OutputDir:      distDir,
+    URLPrefix:      "/dist",
+    CSSTransformer: minify.New(),
+    JSTransformer:  minify.New(),
+    ManifestPath:   filepath.Join(distDir, "manifest.json"),
+})
+manifest, err := builder.Build()
+if err != nil {
+    log.Fatalf("asset build failed: %v", err)
+}
+
 store := grove.NewFileSystemStore(templateDir)
-eng := grove.New(grove.WithStore(store))
-eng.SetGlobal("site_name", "Blog")
-eng.SetGlobal("current_year", "2026")
+eng := grove.New(
+    grove.WithStore(store),
+    grove.WithAssetResolver(manifest.Resolve),
+)
+
+// HTTP routing
+distPattern, distHandler := builder.Route()
+r.Handle(distPattern+"*", distHandler)
 ```
 
-Posts are Go structs implementing `Resolvable` to expose fields to templates:
+`WithAssetResolver(manifest.Resolve)` means every logical
+`{% asset "composites/nav/nav.css" %}` in the templates is rewritten to
+`/dist/composites/nav/nav.<hash>.css` at render time. `builder.Route()`
+serves those files with `Cache-Control: immutable`. See
+[Asset Pipeline](asset-pipeline.md) for the full API.
 
-```go
-type Post struct {
-    Title   string
-    Slug    string
-    Summary string
-    Body    string
-    Date    string
-    Draft   bool
-    Tags    []Tag
-}
+### Templates
 
-func (p Post) GroveResolve(key string) (any, bool) {
-    switch key {
-    case "title":
-        return p.Title, true
-    case "slug":
-        return p.Slug, true
-    // ... other fields
-    }
-    return nil, false
-}
-```
-
-Handlers render templates and assemble the response by replacing placeholder comments with collected assets and meta:
-
-```go
-func handler(w http.ResponseWriter, r *http.Request) {
-    result, _ := eng.Render(r.Context(), "index.grov", grove.Data{
-        "posts": postsAny,
-    })
-
-    body := result.Body
-    body = strings.Replace(body, "<!-- HEAD_ASSETS -->", result.HeadHTML(), 1)
-    body = strings.Replace(body, "<!-- FOOT_ASSETS -->", result.FootHTML(), 1)
-    // ... meta tags, hoisted content
-    w.Write([]byte(body))
-}
-```
-
-### Base Layout
-
-`base.grov` defines the HTML skeleton as a component with named slots:
+`base.grov` keeps the hand-managed global as a URL-style (passthrough)
+asset and composes nav/footer components:
 
 ```html
-<Component name="Base">
-  {% asset "/static/base.css" type="stylesheet" priority=10 %}
-  {% import Nav from "composites/nav" %}
-  {% import Footer from "primitives/footer" %}
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <title>{% #slot "title" %}Grove Blog{% /slot %}</title>
-    <!-- HEAD_ASSETS -->
-    <!-- HEAD_META -->
-    <!-- HEAD_HOISTED -->
-  </head>
-  <body>
-    <Nav site_name={site_name} />
-    <main class="container">{% slot "content" %}</main>
-    <Footer year={current_year} />
-    <!-- FOOT_ASSETS -->
-  </body>
-  </html>
-</Component>
+{% asset "/static/base.css" type="stylesheet" priority=10 %}
+{% import Nav from "composites/nav" %}
+{% import Footer from "primitives/footer" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>{% #slot "title" %}Grove Blog{% /slot %}</title>
+  <!-- HEAD_ASSETS -->
+  <!-- HEAD_META -->
+  <!-- HEAD_HOISTED -->
+</head>
+<body>
+  <Nav site_name={site_name} />
+  <main class="container">{% slot "content" %}</main>
+  <Footer year={current_year} />
+  <!-- FOOT_ASSETS -->
+</body>
+</html>
 ```
 
-The base layout declares `base.css` (global resets, layout, utilities) at `priority=10` so it loads before component stylesheets. Each component (Nav, Footer, etc.) declares its own CSS via `{% asset %}` — these bubble up and appear in `HeadHTML()` after the base styles.
-
-The Go server serves co-located component CSS and JS from the template directory:
-
-```go
-r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
-r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
-```
-
-### Page Templates
-
-`index.grov` imports the base layout and iterates over posts using the card component:
+Component assets look like:
 
 ```html
-{% import Base from "base" %}
-{% import Card from "composites/card" %}
-{% import TagBadge from "primitives/tag-badge" %}
-
-<Base>
-  {% #fill "title" %}Home — Grove Blog{% /fill %}
-  {% #fill "content" %}
-    {% meta name="description" content="A tech blog built with the Grove template engine" %}
-
-    {% #each posts as post %}
-      <Card title={post.title} summary={post.summary} href={"/post/" ~ post.slug} date={post.date}>
-        {% #fill "tags" %}
-          {% #each post.tags as tag %}
-            <TagBadge label={tag.name} color={tag.color} />
-          {% /each %}
-        {% /fill %}
-      </Card>
-    {% /each %}
-  {% /fill %}
-</Base>
+{# composites/nav/nav.grov #}
+{% asset "composites/nav/nav.css" type="stylesheet" %}
+{% asset "composites/nav/nav.js"  type="script" %}
+<nav class="nav">...</nav>
 ```
 
-This demonstrates nested components (tag inside card), slot fills, expression concatenation (`"/post/" ~ post.slug`), and meta tag declaration.
+Placeholder comments in the base layout are replaced by the Go response
+assembler using `result.HeadHTML()`, `result.FootHTML()`, `result.Meta`,
+and `result.GetHoisted("head")` — see `main.go:writeResult`.
 
-### Components
+---
 
-**card.grov** — shows props with defaults and a named slot:
+## Store
 
-```html
-<Component name="Card" title summary href="#" date="">
-  <article>
-    <h2><a href="{% href %}">{% title %}</a></h2>
-    {% #if date %}<time>{% date %}</time>{% /if %}
-    <p>{% summary | truncate(120) %}</p>
-    <div>{% slot "tags" %}</div>
-  </article>
-</Component>
-```
+`examples/store/` adds:
 
-**alert.grov** — shows the `{% #let %}` block with conditional variable assignment:
+- A custom filter registered from Go:
+  ```go
+  eng.RegisterFilter("currency", grove.FilterFn(func(v grove.Value, _ []grove.Value) (grove.Value, error) {
+      cents, _ := v.ToInt64()
+      return grove.StringValue(fmt.Sprintf("$%d.%02d", cents/100, cents%100)), nil
+  }))
+  ```
+  Templates then use `{% product.price | currency %}`.
+- Cookie-based cart state (`cartHandler`, `cartAddHandler`).
+- Query-string filtering + sorting in `productsHandler`.
+- Same asset pipeline wiring as blog.
 
-```html
-<Component name="Alert" type="info">
-  {% #let %}
-    bg = "#d1ecf1"
-    fg = "#0c5460"
-    icon = "i"
+---
 
-    if type == "warning"
-      bg = "#fff3cd"
-      fg = "#856404"
-      icon = "!"
-    elif type == "error"
-      bg = "#f8d7da"
-      fg = "#721c24"
-      icon = "x"
-    end
-  {% /let %}
-  <div style="background: {% bg %}; color: {% fg %}">
-    <span>{% icon %}</span>
-    <div>{% #slot %}{% /slot %}</div>
-  </div>
-</Component>
-```
+## Docs
 
-**button.grov** — shows ternary expressions:
+`examples/docs/` demonstrates:
 
-```html
-<Component name="Button" label href="/" variant="primary">
-  {% #let %}
-    bg = variant == "primary" ? "#e94560" : variant == "outline" ? "transparent" : "#6c757d"
-    fg = variant == "outline" ? "#e94560" : "#fff"
-  {% /let %}
-  <a href="{% href %}" style="background: {% bg %}; color: {% fg %}">{% label %}</a>
-</Component>
-```
+- `grove.WithSandbox(...)` restricting allowed tags / filters and capping
+  loop iterations. Any template that oversteps errors at render time.
+- Deep component nesting (`Base` → `DocsLayout` → page) with sidebar,
+  breadcrumbs, and prev/next partials.
+- Colocated macros (`macros/admonitions.grov`, `macros/code-example.grov`)
+  with their own CSS — picked up by the asset builder just like
+  composites/primitives.
 
-### Running It
+The sandbox config must include `"asset"` in `AllowedTags` for the
+pipeline to work; the example shows the full whitelist.
+
+---
+
+## Email
+
+`examples/email/` is the one example that **does not** use the asset
+pipeline. Email clients (especially Outlook) require inline styles, so
+component `{% asset %}` tags would be useless. Instead the example leans
+on `{% #hoist "preheader" %}`, captured blocks, and table-based layouts
+with MSO conditional comments. See its README for the full feature list.
+
+---
+
+## Running for development
+
+For template hot-reload, use `entr` or similar:
 
 ```bash
-cd examples/blog
-go run main.go
+ls examples/blog/templates/**/*.grov | entr -r go run ./examples/blog
 ```
 
-Open `http://localhost:3000` to see:
-- **Home page** — list of post cards with tags
-- **Post pages** — individual posts with draft warnings (alert component)
-- **Component library** (`/styleguide`) — showcase of all components with variations
+For asset hot-rebuild, swap `builder.Build()` for
+`builder.Watch(ctx, handlers)` — it polls at 500 ms, debounces 100 ms,
+and calls `engine.SetAssetResolver` on each rebuild so new hashes take
+effect immediately. See [Asset Pipeline → Watch mode](asset-pipeline.md#watch-mode-development).

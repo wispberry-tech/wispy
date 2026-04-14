@@ -4,34 +4,34 @@ Components are reusable templates with a declared interface. They accept data th
 
 ## Defining a Component
 
-Wrap a template in `<Component>` to define a named, reusable unit:
+Create a `.grov` file. The file body is your component template — no wrapper tag needed:
 
 ```html
 {# button.grov #}
-<Component name="Button" label href="/" variant="primary">
-  <a href="{% href %}" class="btn btn-{% variant %}">{% label %}</a>
-</Component>
+<a href="{% href %}" class="btn btn-{% variant %}">{% label %}</a>
 ```
 
-- `name` is required — it's the name callers use after importing
-- Props are declared as attributes: bare names are required (`label`), names with values have defaults (`href="/"`)
-- The component body is the template rendered when the component is called
+When invoked at a call site, any attribute you pass becomes a template variable:
+
+```html
+<Button label="Click me" href="/action" variant="primary" />
+```
+
+The file name (without `.grov`) becomes the component name you import. Props are passed as attributes and are immediately available as variables — no declaration required, and any attribute is accepted (permissive binding).
 
 ### Props
 
+All attributes passed at the call site become variables in the component template:
+
 ```html
-<Component name="Card" title summary>
-  <article>
-    <h2>{% title %}</h2>
-    <p>{% summary %}</p>
-  </article>
-</Component>
+{# card.grov #}
+<article>
+  <h2>{% title %}</h2>
+  <p>{% summary %}</p>
+</article>
 ```
 
-- Props without defaults (like `title`, `summary`) are required — omitting them causes a `RuntimeError`
-- Props with defaults (like `variant="primary"`) are optional
-- Passing an unknown prop causes a `RuntimeError`
-- Components have **isolated scope** — they cannot see the caller's variables, only their declared props
+When called as `<Card title="My Post" summary="A summary">`, the variables `title` and `summary` are available in the component. Unlike some frameworks, Grove does not require you to declare, validate, or provide defaults for props — whatever you pass is bound as a variable.
 
 ## Importing Components
 
@@ -44,56 +44,9 @@ Use `{% import %}` to bring components into scope before using them:
 <Button label="Click me" href="/action" />
 ```
 
-- The path is the template name **without** the `.grov` extension
-- The name after `import` must match the `name` attribute on `<Component>` in that file
+- The path is the template name **without** the `.grov` extension (e.g., `"button"` imports `button.grov`)
+- The name after `import` is how you'll reference the component at call sites
 
-### Import variants
-
-**Multiple components from one file:**
-
-```html
-{% import Card, Badge, Button from "ui" %}
-```
-
-**Wildcard — import all components:**
-
-```html
-{% import * from "ui" %}
-```
-
-**Alias — rename locally:**
-
-```html
-{% import Card as InfoCard from "cards" %}
-<InfoCard title="Details" />
-```
-
-**Namespaced wildcard:**
-
-```html
-{% import * as UI from "ui" %}
-<UI.Card title="X" />
-<UI.Badge label="Y" />
-```
-
-### Multi-component files
-
-A single file can define multiple components:
-
-```html
-{# ui.grov #}
-<Component name="Card" title>
-  <div class="card">{% title %}</div>
-</Component>
-
-<Component name="Badge" label>
-  <span class="badge">{% label %}</span>
-</Component>
-
-<Component name="Button" text>
-  <button>{% text %}</button>
-</Component>
-```
 
 ## Slots
 
@@ -103,11 +56,9 @@ Slots let callers inject content into specific points of a component.
 
 ```html
 {# box.grov #}
-<Component name="Box">
-  <div class="box">
-    {% #slot %}No content provided{% /slot %}
-  </div>
-</Component>
+<div class="box">
+  {% #slot %}No content provided{% /slot %}
+</div>
 ```
 
 ```html
@@ -126,18 +77,16 @@ Components can define multiple injection points:
 
 ```html
 {# card.grov #}
-<Component name="Card" title summary>
-  <article>
-    <h2>{% title %}</h2>
-    <p>{% summary %}</p>
-    <div class="tags">
-      {% slot "tags" %}
-    </div>
-    <div class="actions">
-      {% #slot "actions" %}<a href="#">Read more</a>{% /slot %}
-    </div>
-  </article>
-</Component>
+<article>
+  <h2>{% title %}</h2>
+  <p>{% summary %}</p>
+  <div class="tags">
+    {% slot "tags" %}
+  </div>
+  <div class="actions">
+    {% #slot "actions" %}<a href="#">Read more</a>{% /slot %}
+  </div>
+</article>
 ```
 
 Callers fill named slots with `{% #fill %}`:
@@ -164,13 +113,11 @@ Slots can pass data back to the caller using `data={expr}`:
 
 ```html
 {# list.grov #}
-<Component name="List" items>
-  <ul>
-    {% #each items as item %}
-      <li>{% slot "item" data={item} %}</li>
-    {% /each %}
-  </ul>
-</Component>
+<ul>
+  {% #each items as item %}
+    <li>{% slot "item" data={item} %}</li>
+  {% /each %}
+</ul>
 ```
 
 The caller accesses the slot data with `let:data`:
@@ -186,7 +133,7 @@ The caller accesses the slot data with `let:data`:
 
 ## Scope Rules
 
-- **Props** are available inside the component template. The component cannot see the caller's variables.
+- **Props** (attributes passed at the call site) become variables inside the component template. No declaration required; every passed attribute is available.
 - **Fills see the caller's scope**, not the component's. This means you can use your page data inside a `{% #fill %}` block without threading it through props.
 
 ```html
@@ -208,19 +155,17 @@ Template inheritance (`extends`/`block`) is replaced by component composition. D
 
 ```html
 {# base.grov #}
-<Component name="Base">
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <title>{% #slot "title" %}My Site{% /slot %}</title>
-  </head>
-  <body>
-    <nav>...</nav>
-    <main>{% slot "content" %}</main>
-    <footer>{% #slot "footer" %}&copy; 2026 My Site{% /slot %}</footer>
-  </body>
-  </html>
-</Component>
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% #slot "title" %}My Site{% /slot %}</title>
+</head>
+<body>
+  <nav>...</nav>
+  <main>{% slot "content" %}</main>
+  <footer>{% #slot "footer" %}&copy; 2026 My Site{% /slot %}</footer>
+</body>
+</html>
 ```
 
 Pages import and fill the layout slots:
@@ -243,19 +188,18 @@ Components can use other components:
 
 ```html
 {# post-list.grov #}
-<Component name="PostList" posts>
-  {% import Card from "card" %}
-  {% import TagBadge from "primitives/tag-badge" %}
-  {% #each posts as post %}
-    <Card title={post.title} summary={post.summary}>
-      {% #fill "tags" %}
-        {% #each post.tags as tag %}
-          <TagBadge label={tag.name} color={tag.color} />
-        {% /each %}
-      {% /fill %}
-    </Card>
-  {% /each %}
-</Component>
+{% import Card from "card" %}
+{% import TagBadge from "primitives/tag-badge" %}
+
+{% #each posts as post %}
+  <Card title={post.title} summary={post.summary}>
+    {% #fill "tags" %}
+      {% #each post.tags as tag %}
+        <TagBadge label={tag.name} color={tag.color} />
+      {% /each %}
+    {% /fill %}
+  </Card>
+{% /each %}
 ```
 
 ## Dynamic Components
@@ -263,11 +207,13 @@ Components can use other components:
 Render a component whose name is determined at runtime:
 
 ```html
-{% import * from "icons" %}
+{% import Star from "icons/star" %}
+{% import Circle from "icons/circle" %}
+
 <Component is={icon_name} size="lg" />
 ```
 
-The `is` attribute accepts an expression that resolves to a component name from the current import scope.
+The `is` attribute accepts an expression that resolves to an imported component name. The component referenced must be imported in scope.
 
 ## Component Architecture
 
@@ -316,12 +262,17 @@ Components declare their own CSS and JS dependencies using `{% asset %}`. Assets
 
 ```html
 {# nav.grov #}
-<Component name="Nav" site_name>
-  {% asset "/css/composites/nav/nav.css" type="stylesheet" %}
-  {% asset "/js/composites/nav/nav.js" type="script" %}
-  <nav class="nav">...</nav>
-</Component>
+{% asset "composites/nav/nav.css" type="stylesheet" %}
+{% asset "composites/nav/nav.js" type="script" %}
+<nav class="nav">...</nav>
 ```
+
+The `src` values above are **logical names** — the engine resolves them
+through `grove.WithAssetResolver(...)` at render time if one is configured
+(typically the `Manifest.Resolve` from [`pkg/grove/assets`](asset-pipeline.md)).
+Without a resolver the string passes through as-is, which is what you want
+for hand-managed globals like `/static/base.css` that live outside the
+template tree.
 
 Global styles (resets, layout, utilities) stay in `static/base.css` and are declared with a higher `priority` in the base layout so they load first. Component-specific styles use the default priority (0).
 

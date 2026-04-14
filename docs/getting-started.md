@@ -74,7 +74,7 @@ For testing or dynamic templates, use `MemoryStore`:
 ```go
 store := grove.NewMemoryStore()
 store.Set("greeting.grov", `Hello, {% name %}!`)
-store.Set("base.grov", `<Component name="Base"><html>{% slot %}</html></Component>`)
+store.Set("base.grov", `<html>{% slot %}</html>`)
 
 eng := grove.New(grove.WithStore(store))
 
