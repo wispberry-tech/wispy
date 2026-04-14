@@ -189,7 +189,7 @@ func TestAsset_FootHTML(t *testing.T) {
 
 func TestAsset_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"button.html": `<Component name="Button">{% asset "button.css" type="stylesheet" %}<button>click</button></Component>`,
+		"button.html": `{% asset "button.css" type="stylesheet" %}<button>click</button>`,
 		"page.html":   `{% import Button from "button" %}<Button />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -264,7 +264,7 @@ func TestHoist_IndependentTargets(t *testing.T) {
 
 func TestHoist_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"widget.html": `<Component name="Widget">{% #hoist "head" %}<style>.widget{}</style>{% /hoist %}widget</Component>`,
+		"widget.html": `{% #hoist "head" %}<style>.widget{}</style>{% /hoist %}widget`,
 		"page.html":   `{% import Widget from "widget" %}<Widget />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -322,7 +322,7 @@ func TestMeta_CollisionWarning(t *testing.T) {
 
 func TestMeta_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"hero.html": `<Component name="Hero">{% meta name="og:image" content="/hero.jpg" %}</Component>`,
+		"hero.html": `{% meta name="og:image" content="/hero.jpg" %}`,
 		"page.html": `{% import Hero from "hero" %}<Hero />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -546,7 +546,7 @@ func TestSandbox_DisallowedTagInInclude(t *testing.T) {
 	// part.html uses {% set %} which is not in AllowedTags
 	s := grove.NewMemoryStore()
 	s.Set("page.html", `{% import Part from "part" %}<Part />`)
-	s.Set("part.html", `<Component name="Part">{% set x = 1 %}{% x %}</Component>`)
+	s.Set("part.html", `{% set x = 1 %}{% x %}`)
 	eng := grove.New(
 		grove.WithStore(s),
 		grove.WithSandbox(grove.SandboxConfig{

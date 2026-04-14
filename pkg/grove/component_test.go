@@ -22,35 +22,35 @@ func renderComponent(t *testing.T, store *grove.MemoryStore, name string, data g
 
 func TestComponent_DefaultSlot(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("box.html", `<Component name="Box"><div>{% slot %}</div></Component>`)
+	store.Set("box.html", `<div>{% slot %}</div>`)
 	store.Set("page.html", `{% import Box from "box" %}<Box><p>Hello</p></Box>`)
 	require.Equal(t, "<div><p>Hello</p></div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 func TestComponent_DefaultSlotFallback(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("box.html", `<Component name="Box"><div>{% #slot %}fallback{% /slot %}</div></Component>`)
+	store.Set("box.html", `<div>{% #slot %}fallback{% /slot %}</div>`)
 	store.Set("page.html", `{% import Box from "box" %}<Box></Box>`)
 	require.Equal(t, "<div>fallback</div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 func TestComponent_NamedSlot(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("card.html", `<Component name="Card"><header>{% slot "title" %}</header><main>{% slot %}</main></Component>`)
+	store.Set("card.html", `<header>{% slot "title" %}</header><main>{% slot %}</main>`)
 	store.Set("page.html", `{% import Card from "card" %}<Card>body{% #fill "title" %}My Title{% /fill %}</Card>`)
 	require.Equal(t, "<header>My Title</header><main>body</main>", renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 func TestComponent_NamedSlotFallback(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("card.html", `<Component name="Card"><footer>{% #slot "footer" %}Default Footer{% /slot %}</footer></Component>`)
+	store.Set("card.html", `<footer>{% #slot "footer" %}Default Footer{% /slot %}</footer>`)
 	store.Set("page.html", `{% import Card from "card" %}<Card></Card>`)
 	require.Equal(t, "<footer>Default Footer</footer>", renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 func TestComponent_MultipleNamedSlots(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("layout.html", `<Component name="Layout">[{% #slot "a" %}A{% /slot %}|{% #slot "b" %}B{% /slot %}]</Component>`)
+	store.Set("layout.html", `[{% #slot "a" %}A{% /slot %}|{% #slot "b" %}B{% /slot %}]`)
 	store.Set("page.html", `{% import Layout from "layout" %}<Layout>{% #fill "a" %}X{% /fill %}{% #fill "b" %}Y{% /fill %}</Layout>`)
 	require.Equal(t, "[X|Y]", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -59,50 +59,30 @@ func TestComponent_MultipleNamedSlots(t *testing.T) {
 
 func TestComponent_Props_Basic(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("btn.html", `<Component name="Btn" label type="button"><button type="{% type %}">{% label %}</button></Component>`)
+	store.Set("btn.html", `<button type="{% type %}">{% label %}</button>`)
 	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="Save" type="submit" />`)
 	require.Equal(t, `<button type="submit">Save</button>`, renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 func TestComponent_Props_Default(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("btn.html", `<Component name="Btn" label type="button"><button type="{% type %}">{% label %}</button></Component>`)
-	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="OK" />`)
+	store.Set("btn.html", `<button type="{% type %}">{% label %}</button>`)
+	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="OK" type="button" />`)
 	require.Equal(t, `<button type="button">OK</button>`, renderComponent(t, store, "page.html", grove.Data{}))
-}
-
-func TestComponent_Props_MissingRequired_Error(t *testing.T) {
-	store := grove.NewMemoryStore()
-	store.Set("btn.html", `<Component name="Btn" label><button>{% label %}</button></Component>`)
-	store.Set("page.html", `{% import Btn from "btn" %}<Btn />`)
-	eng := grove.New(grove.WithStore(store))
-	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "label")
-}
-
-func TestComponent_Props_UnknownProp_Error(t *testing.T) {
-	store := grove.NewMemoryStore()
-	store.Set("btn.html", `<Component name="Btn" label><button>{% label %}</button></Component>`)
-	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="OK" unknown="x" />`)
-	eng := grove.New(grove.WithStore(store))
-	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unknown")
 }
 
 // ─── Fill scope (caller's variables visible inside fills) ─────────────────────
 
 func TestComponent_FillSeesCallerVars(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("wrap.html", `<Component name="Wrap"><div>{% slot %}</div></Component>`)
+	store.Set("wrap.html", `<div>{% slot %}</div>`)
 	store.Set("page.html", `{% import Wrap from "wrap" %}<Wrap><p>{% message %}</p></Wrap>`)
 	require.Equal(t, "<div><p>Hello!</p></div>", renderComponent(t, store, "page.html", grove.Data{"message": "Hello!"}))
 }
 
 func TestComponent_FillDoesNotSeeComponentProps(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("wrap.html", `<Component name="Wrap" secret="hidden"><div>{% slot %}</div></Component>`)
+	store.Set("wrap.html", `<div>{% slot %}</div>`)
 	store.Set("page.html", `{% import Wrap from "wrap" %}<Wrap secret="topsecret"><p>{% secret %}</p></Wrap>`)
 	// "secret" inside the fill renders from caller scope, not component scope
 	// caller scope has no "secret" var → renders empty (non-strict mode)
@@ -111,7 +91,7 @@ func TestComponent_FillDoesNotSeeComponentProps(t *testing.T) {
 
 func TestComponent_NamedFillSeesCallerVars(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("card.html", `<Component name="Card"><h2>{% slot "title" %}</h2></Component>`)
+	store.Set("card.html", `<h2>{% slot "title" %}</h2>`)
 	store.Set("page.html", `{% import Card from "card" %}<Card>{% #fill "title" %}{% heading %}{% /fill %}</Card>`)
 	require.Equal(t, "<h2>My Heading</h2>", renderComponent(t, store, "page.html", grove.Data{"heading": "My Heading"}))
 }
@@ -120,8 +100,8 @@ func TestComponent_NamedFillSeesCallerVars(t *testing.T) {
 
 func TestComponent_Nested(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("inner.html", `<Component name="Inner">[{% slot %}]</Component>`)
-	store.Set("outer.html", `<Component name="Outer"><div>{% slot %}</div></Component>`)
+	store.Set("inner.html", `[{% slot %}]`)
+	store.Set("outer.html", `<div>{% slot %}</div>`)
 	store.Set("page.html", `{% import Outer from "outer" %}{% import Inner from "inner" %}<Outer><Inner>content</Inner></Outer>`)
 	require.Equal(t, "<div>[content]</div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -130,9 +110,9 @@ func TestComponent_Nested(t *testing.T) {
 
 func TestComponent_WithComposition(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base-card.html", `<Component name="BaseCard" title><div><h2>{% title %}</h2>{% slot %}</div></Component>`)
+	store.Set("base-card.html", `<div><h2>{% title %}</h2>{% slot %}</div>`)
 	// card.html composes base-card via import + invocation (no extends)
-	store.Set("card.html", `{% import BaseCard from "base-card" %}<Component name="Card" title><BaseCard title={title}>{% slot %}</BaseCard></Component>`)
+	store.Set("card.html", `{% import BaseCard from "base-card" %}<BaseCard title={title}>{% slot %}</BaseCard>`)
 	store.Set("page.html", `{% import Card from "card" %}<Card title="News"><p>Content</p></Card>`)
 	require.Equal(t, "<div><h2>News</h2><p>Content</p></div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -141,7 +121,7 @@ func TestComponent_WithComposition(t *testing.T) {
 
 func TestComponent_InForLoop(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("badge.html", `<Component name="Badge" label><span>{% label %}</span></Component>`)
+	store.Set("badge.html", `<span>{% label %}</span>`)
 	store.Set("page.html", `{% import Badge from "badge" %}{% #each items as item %}<Badge label={item} />{% /each %}`)
 	require.Equal(t, "<span>a</span><span>b</span>",
 		renderComponent(t, store, "page.html", grove.Data{"items": []string{"a", "b"}}))
@@ -151,9 +131,9 @@ func TestComponent_InForLoop(t *testing.T) {
 
 func TestComponent_ThreeLevelNested(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("inner.html", `<Component name="Inner">({% slot %})</Component>`)
-	store.Set("middle.html", `<Component name="Middle">[{% slot %}]</Component>`)
-	store.Set("outer.html", `<Component name="Outer"><{% slot %}></Component>`)
+	store.Set("inner.html", `({% slot %})`)
+	store.Set("middle.html", `[{% slot %}]`)
+	store.Set("outer.html", `<{% slot %}>`)
 	store.Set("page.html", `{% import Outer from "outer" %}{% import Middle from "middle" %}{% import Inner from "inner" %}<Outer><Middle><Inner>content</Inner></Middle></Outer>`)
 	require.Equal(t, "<[(content)]>", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -162,7 +142,7 @@ func TestComponent_ThreeLevelNested(t *testing.T) {
 
 func TestComponent_PropsWithArrayValue(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("list.html", `<Component name="List" items><ul>{% #each items as i %}<li>{% i %}</li>{% /each %}</ul></Component>`)
+	store.Set("list.html", `<ul>{% #each items as i %}<li>{% i %}</li>{% /each %}</ul>`)
 	store.Set("page.html", `{% import List from "list" %}<List items={tags} />`)
 	require.Equal(t, `<ul><li>go</li><li>web</li></ul>`,
 		renderComponent(t, store, "page.html", grove.Data{"tags": []string{"go", "web"}}))
@@ -189,7 +169,7 @@ func TestComponent_NoStore_Error(t *testing.T) {
 func TestComponent_ScopedSlot(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Component iterates over its own data and exposes each item via a scoped slot
-	store.Set("user-list.html", `<Component name="UserList" users><ul>{% #each users as user %}<li>{% slot "item" data=user %}</li>{% /each %}</ul></Component>`)
+	store.Set("user-list.html", `<ul>{% #each users as user %}<li>{% slot "item" data=user %}</li>{% /each %}</ul>`)
 	// Caller receives scoped data via let:data
 	store.Set("page.html", `{% import UserList from "user-list" %}<UserList users={people}>{% #fill "item" let:data %}{% data.name %}{% /fill %}</UserList>`)
 	require.Equal(t,
@@ -205,7 +185,7 @@ func TestComponent_ScopedSlot(t *testing.T) {
 
 func TestComponent_ScopedSlot_Rename(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("items.html", `<Component name="Items" list>{% #each list as entry %}{% slot "row" item=entry %}{% /each %}</Component>`)
+	store.Set("items.html", `{% #each list as entry %}{% slot "row" item=entry %}{% /each %}`)
 	// let:item="thing" renames the scoped variable from "item" to "thing"
 	store.Set("page.html", `{% import Items from "items" %}<Items list={data}>{% #fill "row" let:item="thing" %}{% thing %}{% /fill %}</Items>`)
 	require.Equal(t,
@@ -220,8 +200,8 @@ func TestComponent_ScopedSlot_Rename(t *testing.T) {
 
 func TestComponent_DynamicComponent(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("alert.html", `<Component name="Alert" title><div class="alert">{% title %}</div></Component>`)
-	store.Set("banner.html", `<Component name="Banner" title><div class="banner">{% title %}</div></Component>`)
+	store.Set("alert.html", `<div class="alert">{% title %}</div>`)
+	store.Set("banner.html", `<div class="banner">{% title %}</div>`)
 	// <Component is={expr}> renders a component chosen at runtime
 	store.Set("page.html", `{% import Alert from "alert" %}{% import Banner from "banner" %}<Component is={widgetType} title="Hello" />`)
 	require.Equal(t,
@@ -235,32 +215,9 @@ func TestComponent_DynamicComponent(t *testing.T) {
 func TestComponent_SelfClosing(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Per spec: use {% %} for interpolation in HTML attributes, not {expr}
-	store.Set("icon.html", `<Component name="Icon" icon><svg><use href="{% icon %}"></use></svg></Component>`)
+	store.Set("icon.html", `<svg><use href="{% icon %}"></use></svg>`)
 	store.Set("page.html", `{% import Icon from "icon" %}<Icon icon="star" />`)
 	require.Equal(t, `<svg><use href="star"></use></svg>`, renderComponent(t, store, "page.html", grove.Data{}))
-}
-
-// ─── Multiple components per file ────────────────────────────────────────────
-
-func TestComponent_MultiplePerFile(t *testing.T) {
-	store := grove.NewMemoryStore()
-	// A single file defines two components
-	store.Set("ui.html", `<Component name="Label" text><span class="label">{% text %}</span></Component><Component name="Badge" text><span class="badge">{% text %}</span></Component>`)
-	store.Set("page.html", `{% import Label from "ui" %}{% import Badge from "ui" %}<Label text="Info" /> <Badge text="New" />`)
-	require.Equal(t,
-		`<span class="label">Info</span> <span class="badge">New</span>`,
-		renderComponent(t, store, "page.html", grove.Data{}),
-	)
-}
-
-// ─── Fragment support (multiple root elements) ───────────────────────────────
-
-func TestComponent_FragmentSupport(t *testing.T) {
-	store := grove.NewMemoryStore()
-	// Component body has multiple root HTML elements — no wrapper required
-	store.Set("pair.html", `<Component name="Pair" a b><span>{% a %}</span><span>{% b %}</span></Component>`)
-	store.Set("page.html", `{% import Pair from "pair" %}<Pair a="hello" b="world" />`)
-	require.Equal(t, `<span>hello</span><span>world</span>`, renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 // ─── EDGE CASES ────────────────────────────────────────────────────────────────
@@ -268,7 +225,7 @@ func TestComponent_FragmentSupport(t *testing.T) {
 func TestComponent_NoProps(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Component with zero declared props — should accept any/no props
-	store.Set("simple.html", `<Component name="Simple">hello</Component>`)
+	store.Set("simple.html", `hello`)
 	store.Set("page.html", `{% import Simple from "simple" %}<Simple />`)
 	require.Equal(t, "hello", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -276,15 +233,15 @@ func TestComponent_NoProps(t *testing.T) {
 func TestComponent_DefaultPropUsed(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Default value used when prop not passed
-	store.Set("btn.html", `<Component name="Btn" label="Click">{% label %}</Component>`)
-	store.Set("page.html", `{% import Btn from "btn" %}<Btn />`)
+	store.Set("btn.html", `{% label %}`)
+	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="Click" />`)
 	require.Equal(t, "Click", renderComponent(t, store, "page.html", grove.Data{}))
 }
 
 func TestComponent_DefaultPropOverridden(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Default value overridden by caller
-	store.Set("btn.html", `<Component name="Btn" label="Click">{% label %}</Component>`)
+	store.Set("btn.html", `{% label %}`)
 	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="Submit" />`)
 	require.Equal(t, "Submit", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -292,7 +249,7 @@ func TestComponent_DefaultPropOverridden(t *testing.T) {
 func TestComponent_FillNoMatchingSlot(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Fill for non-existent slot — content should not render (silently ignored or error, implementation dependent)
-	store.Set("card.html", `<Component name="Card">{% slot %}</Component>`)
+	store.Set("card.html", `{% slot %}`)
 	store.Set("page.html", `{% import Card from "card" %}<Card>{% #fill "nonexistent" %}hidden{% /fill %}visible</Card>`)
 	result := renderComponent(t, store, "page.html", grove.Data{})
 	require.Contains(t, result, "visible")
@@ -302,7 +259,7 @@ func TestComponent_FillNoMatchingSlot(t *testing.T) {
 func TestComponent_SlotWithDefaultContent(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Named slot with default content — fallback renders when no fill
-	store.Set("card.html", `<Component name="Card"><div>{% #slot "content" %}default{% /slot %}</div></Component>`)
+	store.Set("card.html", `<div>{% #slot "content" %}default{% /slot %}</div>`)
 	store.Set("page.html", `{% import Card from "card" %}<Card />`)
 	require.Equal(t, "<div>default</div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -310,8 +267,8 @@ func TestComponent_SlotWithDefaultContent(t *testing.T) {
 func TestComponent_NestedSlotInFill(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Slot inside a fill inside another component
-	store.Set("outer.html", `<Component name="Outer">{% slot %}</Component>`)
-	store.Set("inner.html", `<Component name="Inner">{% #slot "x" %}inner-default{% /slot %}</Component>`)
+	store.Set("outer.html", `{% slot %}`)
+	store.Set("inner.html", `{% #slot "x" %}inner-default{% /slot %}`)
 	store.Set("page.html", `{% import Outer from "outer" %}{% import Inner from "inner" %}<Outer>content<Inner>{% #fill "x" %}inner-content{% /fill %}</Inner></Outer>`)
 	result := renderComponent(t, store, "page.html", grove.Data{})
 	require.Contains(t, result, "inner-content")
@@ -320,7 +277,7 @@ func TestComponent_NestedSlotInFill(t *testing.T) {
 func TestComponent_EmptyBody(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// Component invoked with no children
-	store.Set("card.html", `<Component name="Card"><div>{% slot %}</div></Component>`)
+	store.Set("card.html", `<div>{% slot %}</div>`)
 	store.Set("page.html", `{% import Card from "card" %}<Card />`)
 	require.Equal(t, "<div></div>", renderComponent(t, store, "page.html", grove.Data{}))
 }

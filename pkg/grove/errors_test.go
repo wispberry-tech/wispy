@@ -51,18 +51,6 @@ func TestError_AttrOnNil(t *testing.T) {
 	require.Equal(t, "", result)
 }
 
-// TestError_MissingRequiredProp verifies that a component with required props errors when not provided.
-func TestError_MissingRequiredProp(t *testing.T) {
-	store := grove.NewMemoryStore()
-	store.Set("card.html", `<Component name="Card" title>{% title %}</Component>`)
-	store.Set("page.html", `{% import Card from "card" %}<Card />`)
-
-	eng := grove.New(grove.WithStore(store))
-	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "title")
-}
-
 // TestError_StrictMode_NestedMissing verifies that StrictVariables catches nested undefined access.
 func TestError_StrictMode_NestedMissing(t *testing.T) {
 	eng := newEngine(t, grove.WithStrictVariables(true))
@@ -107,7 +95,7 @@ func TestError_ParseError_UnclosedCapture(t *testing.T) {
 // TestError_ParseError_UnclosedFill verifies that unclosed {% #fill %} is a parse error.
 func TestError_ParseError_UnclosedFill(t *testing.T) {
 	eng := newEngine(t)
-	err := renderErr(t, eng, `<Component><{% #fill "x" %}content</Component>`, grove.Data{})
+	err := renderErr(t, eng, `{% #fill "x" %}content`, grove.Data{})
 	require.Error(t, err)
 }
 
