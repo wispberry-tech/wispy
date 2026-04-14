@@ -37,6 +37,9 @@ go.work.sum
 # .idea/
 # .vscode/
 
+# Asset pipeline output
+examples/*/dist/
+
 # Claude stuff
 .claude/
 .superpowers/

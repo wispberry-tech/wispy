@@ -1,7 +1,7 @@
 # Grove Asset Pipeline
 
 **Date:** 2026-04-14
-**Status:** Draft
+**Status:** Landed 2026-04-14
 **Scope:** New opt-in asset build system -- co-located CSS/JS processing, content hashing, manifest-based URL resolution
 
 ## Motivation
@@ -510,7 +510,7 @@ For each file in SourceDir matching configured extensions:
 
 ### Watch Mode Behavior
 
-- Uses `os.ReadDir` polling or `fsnotify` (TBD -- fsnotify adds a dependency, polling is simpler)
+- Uses polling (500ms `time.Ticker`, per-file `os.Stat` mtime compare) — no fsnotify dependency. See `watch.go`.
 - On file change: rebuild only changed files
 - Debounce rapid changes (100ms window)
 - **Partial swap on failure:** if a file fails to transform (syntax error, I/O error), it keeps its previous manifest entry. Successful files update. `OnError` fires for each failure. `OnChange` still fires with the partially-updated manifest so the working files reflect latest changes
@@ -711,7 +711,6 @@ These dependencies are only pulled in when the consuming app imports the `minify
 | File | Change |
 |------|--------|
 | `pkg/grove/engine.go` | Add `AssetResolver` type, `WithAssetResolver()` option, `SetAssetResolver()`, `AssetResolver()`, `RecordAssetRef()`, `ReferencedAssets()`, `ResetReferencedAssets()`; internal resolver field + lazy referenced-name set |
-| `pkg/grove/options.go` | Add `WithAssetResolver` option function (if options are in separate file) |
 | `internal/vm/vm.go` | `OP_ASSET`: call `v.eng.RecordAssetRef(src)`, then resolve via `v.eng.AssetResolver()` before storing |
 | `internal/vm/value.go` | `EngineIface`: add `AssetResolver()` and `RecordAssetRef(string)` methods |
 | `go.mod` | No change for core; `minify` sub-package adds tdewolff deps |

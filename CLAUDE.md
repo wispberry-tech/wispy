@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Grove is a bytecode-compiled template engine for Go. Templates (`.grov` files) are lexed, parsed into an AST, compiled to bytecode, and executed on a stack-based VM. The Go module is `github.com/wispberry-tech/grove` (Go 1.24). The only external dependency is `testify` (test-only).
+Grove is a bytecode-compiled template engine for Go. Templates (`.grov` files) are lexed, parsed into an AST, compiled to bytecode, and executed on a stack-based VM. The Go module is `github.com/wispberry-tech/grove` (Go 1.24). The core engine has only one external dependency (`testify`, test-only); the optional `pkg/grove/assets/minify` sub-package pulls in `github.com/tdewolff/minify/v2` — importing it is opt-in.
 
 ## Commands
 
@@ -31,7 +31,9 @@ No Makefile, linter config, or CI pipeline exists. Use `gofmt` for formatting.
 
 | Package | Role |
 |---------|------|
-| `pkg/grove/` | Public API: `Engine`, `RenderResult`, options, store interfaces, filter registration |
+| `pkg/grove/` | Public API: `Engine`, `RenderResult`, options, store interfaces, filter registration, `AssetResolver` |
+| `pkg/grove/assets/` | Optional asset pipeline: `Manifest`, `Builder`, `Config`, HTTP handler, watch mode |
+| `pkg/grove/assets/minify/` | Optional CSS/JS `Transformer` backed by `tdewolff/minify` |
 | `internal/lexer/` | State-machine tokenizer |
 | `internal/parser/` | Token stream → AST |
 | `internal/ast/` | AST node types |
@@ -60,6 +62,9 @@ Tests use table-driven patterns with `testify/require`. Test helpers `newEngine(
 
 ## Other resources
 
-- `spec/` — Design specifications and comparative analysis
-- `plans/` — Phased implementation plans (1–8) documenting the build history
-- `examples/blog/` — Full working blog app demonstrating the engine
+- `spec/` — Design specifications (asset pipeline, syntax improvements, test coverage) and comparative analysis
+- `docs/` — User-facing documentation (syntax, components, filters, web primitives, asset pipeline, API reference)
+- `examples/blog/` — Reference blog app; also migrated to the asset pipeline
+- `examples/store/` — E-commerce example (asset pipeline + custom `currency` filter)
+- `examples/docs/` — Documentation site example (asset pipeline + sandbox config)
+- `examples/email/` — Transactional email templates (no asset pipeline; inline styles)
