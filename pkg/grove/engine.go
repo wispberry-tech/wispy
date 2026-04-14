@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/wispberry-tech/grove/internal/ast"
 	"github.com/wispberry-tech/grove/internal/compiler"
@@ -19,6 +20,11 @@ import (
 	"github.com/wispberry-tech/grove/internal/vm"
 )
 
+// AssetResolver maps a logical asset name to a served URL. Returns (url, true)
+// if resolved, ("", false) to fall through to the original name. Configure
+// one via WithAssetResolver; typically callers pass assets.Manifest.Resolve.
+type AssetResolver = vm.AssetResolver
+
 // Option configures an Engine at creation time.
 type Option func(*engineCfg)
 
@@ -27,6 +33,7 @@ type engineCfg struct {
 	store           store.Store
 	cacheSize       int // 0 = use default (512)
 	sandbox         *SandboxConfig
+	assetResolver   AssetResolver
 }
 
 // SandboxConfig restricts what templates can do.
@@ -60,6 +67,15 @@ func WithSandbox(cfg SandboxConfig) Option {
 	return func(c *engineCfg) { c.sandbox = &cfg }
 }
 
+// WithAssetResolver configures the engine to resolve {% asset %} logical
+// names through the given function at render time. Pass a nil resolver, or
+// omit this option, to disable resolution (default).
+//
+// Typical usage: WithAssetResolver(manifest.Resolve).
+func WithAssetResolver(r AssetResolver) Option {
+	return func(c *engineCfg) { c.assetResolver = r }
+}
+
 // Engine is the Wispy template engine. Create with New(). Safe for concurrent use.
 type Engine struct {
 	cfg       engineCfg
@@ -67,6 +83,17 @@ type Engine struct {
 	filters   map[string]any         // vm.FilterFn | *vm.FilterDef (source of truth)
 	filterFns map[string]vm.FilterFn // resolved filter functions (hot-path lookup)
 	cache     *lruCache
+
+	// assetResolver holds an atomic.Pointer so SetAssetResolver can swap it
+	// concurrently with active renders without locking. A nil pointer means
+	// "no resolver" — the hot path is a single atomic load + nil check.
+	assetResolver atomic.Pointer[AssetResolver]
+
+	// refAssets records logical asset names seen during rendering. Lazy-
+	// allocated — nil when no resolver is configured, so apps not using the
+	// pipeline pay nothing. Guarded by refMu.
+	refMu     sync.Mutex
+	refAssets map[string]struct{}
 }
 
 // New creates a configured Engine.
@@ -84,6 +111,11 @@ func New(opts ...Option) *Engine {
 		cacheSize = 512
 	}
 	e.cache = newLRUCache(cacheSize)
+
+	if e.cfg.assetResolver != nil {
+		r := e.cfg.assetResolver
+		e.assetResolver.Store(&r)
+	}
 
 	e.RegisterFilter("safe", vm.FilterFn(func(v vm.Value, _ []vm.Value) (vm.Value, error) {
 		return vm.SafeHTMLVal(v.String()), nil
@@ -335,6 +367,62 @@ func (e *Engine) MaxLoopIter() int {
 		return e.cfg.sandbox.MaxLoopIter
 	}
 	return 0
+}
+
+// AssetResolver returns the currently configured asset resolver, or nil when
+// unused. Safe to call concurrently with SetAssetResolver.
+func (e *Engine) AssetResolver() AssetResolver {
+	p := e.assetResolver.Load()
+	if p == nil {
+		return nil
+	}
+	return *p
+}
+
+// SetAssetResolver atomically swaps the asset resolver. Safe for concurrent
+// use; designed for watch mode where the resolver updates on file changes
+// while the engine continues serving requests. Pass nil to disable.
+func (e *Engine) SetAssetResolver(r AssetResolver) {
+	if r == nil {
+		e.assetResolver.Store(nil)
+		return
+	}
+	e.assetResolver.Store(&r)
+}
+
+// RecordAssetRef records a logical asset name seen during rendering. No-op
+// when no resolver is configured — the map is not allocated, so apps that
+// don't use the pipeline pay nothing.
+func (e *Engine) RecordAssetRef(logicalName string) {
+	if e.assetResolver.Load() == nil {
+		return
+	}
+	e.refMu.Lock()
+	if e.refAssets == nil {
+		e.refAssets = make(map[string]struct{})
+	}
+	e.refAssets[logicalName] = struct{}{}
+	e.refMu.Unlock()
+}
+
+// ReferencedAssets returns a snapshot of logical asset names seen via
+// OP_ASSET since the engine started (or since ResetReferencedAssets was
+// called). The returned map is a copy — safe to mutate.
+func (e *Engine) ReferencedAssets() map[string]struct{} {
+	e.refMu.Lock()
+	defer e.refMu.Unlock()
+	out := make(map[string]struct{}, len(e.refAssets))
+	for k := range e.refAssets {
+		out[k] = struct{}{}
+	}
+	return out
+}
+
+// ResetReferencedAssets clears the referenced-name set.
+func (e *Engine) ResetReferencedAssets() {
+	e.refMu.Lock()
+	e.refAssets = nil
+	e.refMu.Unlock()
 }
 
 // ─── grove:data / grove:nowarn post-processing ──────────────────────────────

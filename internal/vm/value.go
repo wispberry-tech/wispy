@@ -516,6 +516,11 @@ func OptionOutputsHTML() FilterOption {
 // FilterSet is a named collection of filters for bulk registration.
 type FilterSet map[string]any
 
+// AssetResolver maps a logical asset name to a served URL. Returns (url, true)
+// if resolved, ("", false) to fall through to the original name. A nil resolver
+// is treated as pass-through.
+type AssetResolver func(logicalName string) (string, bool)
+
 // EngineIface is the callback interface the VM uses to call back into the Engine.
 type EngineIface interface {
 	LookupFilter(name string) (FilterFn, bool)
@@ -527,6 +532,11 @@ type EngineIface interface {
 	// MaxLoopIter returns the maximum number of loop iterations allowed per render.
 	// Returns 0 for unlimited.
 	MaxLoopIter() int
+	// AssetResolver returns the configured asset resolver, or nil when unused.
+	AssetResolver() AssetResolver
+	// RecordAssetRef records a logical asset name seen during OP_ASSET.
+	// Implementations should no-op when no resolver is configured.
+	RecordAssetRef(logicalName string)
 }
 
 // ArgInt reads args[i] as an integer, returning def if out of range or not convertible.

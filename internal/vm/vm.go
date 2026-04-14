@@ -1006,6 +1006,16 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 			assetType := v.pop().String()
 			src := v.pop().String()
 
+			// Record the logical name (pre-resolution) for prune tracking.
+			v.eng.RecordAssetRef(src)
+
+			// Resolve through the configured resolver (no-op if nil).
+			if resolve := v.eng.AssetResolver(); resolve != nil {
+				if hashed, ok := resolve(src); ok {
+					src = hashed
+				}
+			}
+
 			if !v.rc.seenSrc[src] {
 				v.rc.seenSrc[src] = true
 				v.rc.assets = append(v.rc.assets, assetEntry{
