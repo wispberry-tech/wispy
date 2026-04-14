@@ -1,0 +1,1 @@
+sudo rm ./.zprofile ./.zshrc ./.vscode ./.ripgreprc ./.profile ./.mcp.json ./.idea ./.gitmodules ./.gitconfig ./.bashrc ./.bash_profile
