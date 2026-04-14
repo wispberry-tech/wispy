@@ -1,11 +1,3 @@
-// Package assets is Grove's opt-in asset build pipeline. It scans a source
-// directory for CSS and JS files, applies a pluggable Transformer, writes
-// content-hashed copies to an output directory, and produces a JSON manifest
-// mapping logical asset names to served URLs.
-//
-// The engine resolves {% asset %} logical names through a resolver function
-// (typically Manifest.Resolve) configured via grove.WithAssetResolver. Apps
-// that do not import this package pay zero cost.
 package assets
 
 // Transformer processes raw asset bytes for a given media type.

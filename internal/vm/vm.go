@@ -802,17 +802,15 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 			// Set up isolated component scope: globals → component scope
 			v.sc = v.newScopeFromGlobal()
 
-			// If no {% props %} declaration (permissive mode), bind all props now
-			if compBC.Props == nil {
-				for k, raw := range props {
-					typedVal, ok := raw.(Value)
-					if !ok {
-						v.csdepth--
-						v.sc = callerScope
-						return &runtimeErr{msg: fmt.Sprintf("component: internal: expected Value for prop %q, got %T", k, raw)}
-					}
-					v.sc.Set(k, typedVal)
+			// Permissive: bind all passed props into the component scope.
+			for k, raw := range props {
+				typedVal, ok := raw.(Value)
+				if !ok {
+					v.csdepth--
+					v.sc = callerScope
+					return &runtimeErr{msg: fmt.Sprintf("component: internal: expected Value for prop %q, got %T", k, raw)}
 				}
+				v.sc.Set(k, typedVal)
 			}
 
 			err = v.run(ctx, compBC)
@@ -866,16 +864,14 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 
 			v.sc = v.newScopeFromGlobal()
 
-			if compBC.Props == nil {
-				for k, raw := range props {
-					typedVal, ok := raw.(Value)
-					if !ok {
-						v.csdepth--
-						v.sc = callerScope
-						return &runtimeErr{msg: fmt.Sprintf("dynamic component %q: internal: expected Value for prop %q, got %T", compName, k, raw)}
-					}
-					v.sc.Set(k, typedVal)
+			for k, raw := range props {
+				typedVal, ok := raw.(Value)
+				if !ok {
+					v.csdepth--
+					v.sc = callerScope
+					return &runtimeErr{msg: fmt.Sprintf("dynamic component %q: internal: expected Value for prop %q, got %T", compName, k, raw)}
 				}
+				v.sc.Set(k, typedVal)
 			}
 
 			err = v.run(ctx, compBC)
@@ -883,40 +879,6 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 			v.sc = callerScope
 			if err != nil {
 				return err
-			}
-
-		case compiler.OP_PROPS_INIT:
-			if v.csdepth == 0 {
-				return &runtimeErr{msg: "props declaration outside component context"}
-			}
-			frame := &v.compStack[v.csdepth-1]
-			passed := frame.passedProps
-			declared := bc.Props
-
-			// Build declared set for unknown-prop check
-			declaredSet := make(map[string]bool, len(declared))
-			for _, p := range declared {
-				declaredSet[p.Name] = true
-			}
-			// Check for unknown props
-			for k := range passed {
-				if !declaredSet[k] {
-					return &runtimeErr{msg: fmt.Sprintf("component: unknown prop %q", k)}
-				}
-			}
-			// Bind props: passed value or default; error if required and missing
-			for _, p := range declared {
-				if raw, ok := passed[p.Name]; ok {
-					typedVal, vok := raw.(Value)
-					if !vok {
-						return &runtimeErr{msg: fmt.Sprintf("component: internal: expected Value for prop %q, got %T", p.Name, raw)}
-					}
-					v.sc.Set(p.Name, typedVal)
-				} else if p.Default != nil {
-					v.sc.Set(p.Name, fromConst(p.Default))
-				} else {
-					return &runtimeErr{msg: fmt.Sprintf("component: missing required prop %q", p.Name)}
-				}
 			}
 
 		case compiler.OP_SLOT:

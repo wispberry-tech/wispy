@@ -84,9 +84,6 @@ const (
 	// in caller scope. If not found, executes bc.Blocks[B] (the default content).
 	// B=0xFFFF means no default (empty slot).
 	OP_SLOT
-	// OP_PROPS_INIT — no operands; reads bc.Props vs compStack.top().passedProps;
-	// validates required/unknown props and binds them into the current scope.
-	OP_PROPS_INIT
 
 	// ─── Plan 7 opcodes ────────────────────────────────────────────────────────
 	// OP_ASSET — collect an asset into the render context.
@@ -157,7 +154,6 @@ type Bytecode struct {
 	Macros              []MacroDef        // compiled inline macros (referenced by OP_MACRO_DEF)
 	Blocks              []BlockDef        // compiled block bodies (parent defaults + child overrides)
 	Extends             string            // non-empty if this template uses {% extends %}
-	Props               []MacroParam      // from {% props %} declaration; nil = no declaration (permissive)
 	Components          []ComponentDef    // one entry per {% component %} call in this template
 	ImportMap           map[string]string // localName → "src#compName" for dynamic component resolution
 	EstimatedOutputSize int               // sum of static string constant lengths (hint for output buffer)

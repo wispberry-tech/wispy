@@ -206,10 +206,6 @@ func (e *Engine) RenderTo(ctx context.Context, name string, data Data, w io.Writ
 // LoadTemplate loads, lexes, parses, and compiles a named template from the store.
 // Results are cached by name in the LRU cache. Implements vm.EngineIface.
 func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
-	// Handle "src#CompName" format for named components
-	if idx := strings.Index(name, "#"); idx >= 0 {
-		return e.loadNamedComponent(name[:idx], name[idx+1:])
-	}
 	if bc, ok := e.cache.get(name); ok {
 		return bc, nil
 	}
@@ -239,64 +235,6 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 		return nil, err
 	}
 	e.cache.set(name, bc)
-	return bc, nil
-}
-
-// loadNamedComponent loads a specific named component from a template file.
-// It parses the file, finds the ComponentDefNode with the matching name,
-// and compiles just that component.
-func (e *Engine) loadNamedComponent(src, compName string) (*compiler.Bytecode, error) {
-	cacheKey := src + "#" + compName
-	if bc, ok := e.cache.get(cacheKey); ok {
-		return bc, nil
-	}
-	if e.cfg.store == nil {
-		return nil, fmt.Errorf("no store configured")
-	}
-
-	// Load the source file
-	raw, err := e.cfg.store.Load(src)
-	if err != nil {
-		raw2, err2 := e.cfg.store.Load(src + ".html")
-		if err2 != nil {
-			return nil, fmt.Errorf("template %q not found", src)
-		}
-		raw = raw2
-	}
-
-	tokens, err := lexer.Tokenize(string(raw))
-	if err != nil {
-		return nil, &groverrors.ParseError{Message: err.Error()}
-	}
-	prog, err := parser.Parse(tokens, false, e.allowedTagsMap())
-	if err != nil {
-		return nil, err
-	}
-
-	// Find the named ComponentDefNode
-	for _, node := range prog.Body {
-		if def, ok := node.(*ast.ComponentDefNode); ok && def.Name == compName {
-			// Create a program with just this component's PropsNode + body
-			compProg := &ast.Program{}
-			if len(def.Props) > 0 {
-				compProg.Body = append(compProg.Body, &ast.PropsNode{Params: def.Props, Line: def.Line})
-			}
-			compProg.Body = append(compProg.Body, def.Body...)
-			bc, compErr := e.compileChecked(compProg)
-			if compErr != nil {
-				return nil, compErr
-			}
-			e.cache.set(cacheKey, bc)
-			return bc, nil
-		}
-	}
-
-	// No named component found — fall back to treating entire file as component
-	bc, err := e.compileChecked(prog)
-	if err != nil {
-		return nil, err
-	}
-	e.cache.set(cacheKey, bc)
 	return bc, nil
 }
 

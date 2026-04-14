@@ -26,8 +26,8 @@ type parser struct {
 	tokens      []lexer.Token
 	pos         int
 	inline      bool
-	allowedTags map[string]bool            // nil = all allowed; non-nil = whitelist
-	imports     map[string]importEntry      // local name → {src, compName}
+	allowedTags map[string]bool        // nil = all allowed; non-nil = whitelist
+	imports     map[string]importEntry // local name → {src, compName}
 }
 
 type importEntry struct {
@@ -49,12 +49,13 @@ func (p *parser) parseProgram() (*ast.Program, error) {
 			prog.Body = append(prog.Body, node)
 		}
 	}
-	// Store import map for dynamic component resolution
+	// Store import map for dynamic component resolution. File-per-component:
+	// the src path IS the template to load.
 	if len(p.imports) > 0 {
 		prog.ImportMap = make(map[string]string, len(p.imports))
 		for localName, entry := range p.imports {
 			if entry.compName != "*" {
-				prog.ImportMap[localName] = entry.src + "#" + entry.compName
+				prog.ImportMap[localName] = entry.src
 			}
 		}
 	}
@@ -197,16 +198,11 @@ func (p *parser) parseTag() (ast.Node, error) {
 		case "meta":
 			return p.parseMeta(tagStart)
 
-		// Removed syntax — produce clear errors
+		// Removed syntax — emit migration-aware errors.
 		case "extends":
-			return nil, p.errorf(tagStart.Line, tagStart.Col,
-				"extends syntax has been removed; use component composition with {%% #slot %%}/{%% #fill %%}")
-		case "unless":
-			return nil, p.errorf(tagStart.Line, tagStart.Col,
-				`unknown tag "unless": use {%% #if not ... %%} instead`)
-		case "with":
-			return nil, p.errorf(tagStart.Line, tagStart.Col,
-				`unknown tag "with": use {%% #let %%} or {%% set %%} instead`)
+			return nil, p.errorf(tagStart.Line, tagStart.Col, "extends syntax has been removed; use <Component> layouts and {%% slot %%}/{%% #fill %%} instead")
+		case "unless", "with":
+			return nil, p.errorf(tagStart.Line, tagStart.Col, "unknown tag %q", name)
 		}
 	}
 
@@ -233,16 +229,62 @@ func (p *parser) parseTag() (ast.Node, error) {
 func (p *parser) parseElement() (ast.Node, error) {
 	tk := p.peek()
 
-	// <Component> for definition and dynamic invocation
+	// <Component is={expr} ...> — dynamic component invocation.
 	if tk.Value == "Component" {
-		return p.parseComponentDefElement()
+		return p.parseDynamicComponent()
 	}
 
-	// Everything else must be an imported component invocation
+	// Imported component invocation (PascalCase tag resolved via {% import %}).
 	if p.resolveImport(tk.Value) != nil {
 		return p.parseComponentInvocation()
 	}
 	return nil, p.errorf(tk.Line, tk.Col, "unknown element <%s>; did you forget {%% import ... from ... %%}?", tk.Value)
+}
+
+// parseDynamicComponent handles <Component is={expr} prop="v" />. The target
+// component is resolved at runtime via the expression bound to `is`.
+func (p *parser) parseDynamicComponent() (ast.Node, error) {
+	openTk := p.advance() // consume TK_ELEMENT_OPEN("Component")
+
+	var isExpr ast.Node
+	var props []ast.NamedArgNode
+	var selfClose bool
+	for {
+		name, value, sc, err := p.readAttr()
+		if err != nil {
+			return nil, err
+		}
+		if name == "" {
+			selfClose = sc
+			break
+		}
+		if name == "is" {
+			if value == nil {
+				return nil, p.errorf(openTk.Line, openTk.Col, "<Component is=...> requires an expression value")
+			}
+			isExpr = value
+			continue
+		}
+		if value == nil {
+			value = &ast.BoolLiteral{Value: true, Line: openTk.Line}
+		}
+		props = append(props, ast.NamedArgNode{Key: name, Value: value, Line: openTk.Line})
+	}
+	if isExpr == nil {
+		return nil, p.errorf(openTk.Line, openTk.Col, "<Component> requires an is={expr} attribute")
+	}
+
+	// Encode `is` as a magic first prop key consumed by the compiler.
+	allProps := append([]ast.NamedArgNode{{Key: "__is__", Value: isExpr, Line: openTk.Line}}, props...)
+	node := &ast.ComponentNode{
+		Name:  "__dynamic__",
+		Props: allProps,
+		Line:  openTk.Line,
+	}
+	if !selfClose {
+		return nil, p.errorf(openTk.Line, openTk.Col, "<Component is=...> must be self-closing")
+	}
+	return node, nil
 }
 
 // resolveImport returns the importEntry for a component name, or nil if not found.
@@ -335,155 +377,6 @@ func (p *parser) readAttr() (name string, value ast.Node, selfClose bool, err er
 	return "", nil, false, p.errorf(valTk.Line, valTk.Col, "expected string or {expression} for attribute value")
 }
 
-// parseElementBody parses nodes until a closing element </closeElem> or a stop element <stopElem>.
-// Does NOT consume the stop/close element.
-func (p *parser) parseElementBody(closeElem string, stopElems ...string) ([]ast.Node, error) {
-	var nodes []ast.Node
-	for !p.atEOF() {
-		tk := p.peek()
-
-		// Stop on </CloseElem>
-		if tk.Kind == lexer.TK_ELEMENT_CLOSE && tk.Value == closeElem {
-			return nodes, nil
-		}
-
-		// Stop on <StopElem> (e.g. <ElseIf>, <Else>, <Empty>)
-		if tk.Kind == lexer.TK_ELEMENT_OPEN {
-			for _, stop := range stopElems {
-				if tk.Value == stop {
-					return nodes, nil
-				}
-			}
-		}
-
-		node, err := p.parseNode()
-		if err != nil {
-			return nil, err
-		}
-		if node != nil {
-			nodes = append(nodes, node)
-		}
-	}
-	return nodes, nil
-}
-
-func (p *parser) expectElementClose(name string) error {
-	tk := p.peek()
-	if tk.Kind != lexer.TK_ELEMENT_CLOSE || tk.Value != name {
-		return p.errorf(tk.Line, tk.Col, "expected </%s>, got %q", name, tk.Value)
-	}
-	p.advance()
-	return nil
-}
-
-// ─── <Component name="X" prop1 prop2="default"> ─────────────────────────────
-
-func (p *parser) parseComponentDefElement() (ast.Node, error) {
-	openTk := p.advance() // consume TK_ELEMENT_OPEN("Component")
-
-	// First pass: check if this is a dynamic component (<Component is={expr}>)
-	// or a definition (<Component name="X">)
-	var compName string
-	var isExpr ast.Node
-	var params []ast.MacroParam
-	var props []ast.NamedArgNode
-	var selfClose bool
-
-	for {
-		name, value, sc, err := p.readAttr()
-		if err != nil {
-			return nil, err
-		}
-		if name == "" {
-			selfClose = sc
-			break
-		}
-		if name == "is" {
-			isExpr = value
-			continue
-		}
-		if name == "name" {
-			if s, ok := value.(*ast.StringLiteral); ok {
-				compName = s.Value
-				continue
-			}
-			// bare `name` or `name={expr}` after `name="X"` is a prop declaration
-		}
-		// For definitions: other attributes are props
-		// For dynamic: other attributes are passed props
-		param := ast.MacroParam{Name: name}
-		if value != nil {
-			param.Default = value
-		}
-		params = append(params, param)
-		if value == nil {
-			value = &ast.BoolLiteral{Value: true, Line: openTk.Line}
-		}
-		props = append(props, ast.NamedArgNode{Key: name, Value: value, Line: openTk.Line})
-	}
-
-	// Dynamic component: <Component is={expr} title="Hello" />
-	if isExpr != nil {
-		node := &ast.ComponentNode{
-			Name:  "__dynamic__",
-			Props: props,
-			Line:  openTk.Line,
-		}
-		// Store the is-expression as a special prop
-		node.Props = append([]ast.NamedArgNode{{Key: "__is__", Value: isExpr, Line: openTk.Line}}, node.Props...)
-		if !selfClose {
-			// Parse body
-			var defaultFill []ast.Node
-			var fills []ast.FillNode
-			for !p.atEOF() {
-				tk := p.peek()
-				if tk.Kind == lexer.TK_ELEMENT_CLOSE && tk.Value == "Component" {
-					p.advance()
-					break
-				}
-				if tk.Kind == lexer.TK_ELEMENT_OPEN && tk.Value == "Fill" {
-					fill, fillErr := p.parseFillElement()
-					if fillErr != nil {
-						return nil, fillErr
-					}
-					fills = append(fills, *fill)
-					continue
-				}
-				n, parseErr := p.parseNode()
-				if parseErr != nil {
-					return nil, parseErr
-				}
-				if n != nil {
-					defaultFill = append(defaultFill, n)
-				}
-			}
-			node.DefaultFill = defaultFill
-			node.Fills = fills
-		}
-		return node, nil
-	}
-
-	// Component definition: <Component name="X" ...>body</Component>
-	if selfClose {
-		return nil, p.errorf(openTk.Line, openTk.Col, "<Component> definition cannot be self-closing")
-	}
-
-	body, err := p.parseElementBody("Component")
-	if err != nil {
-		return nil, err
-	}
-	if closeErr := p.expectElementClose("Component"); closeErr != nil {
-		return nil, closeErr
-	}
-
-	return &ast.ComponentDefNode{
-		Name:  compName,
-		Props: params,
-		Body:  body,
-		Line:  openTk.Line,
-	}, nil
-}
-
 // ─── Component invocation: <Btn label="Save" /> ─────────────────────────────
 
 func (p *parser) parseComponentInvocation() (ast.Node, error) {
@@ -515,10 +408,9 @@ func (p *parser) parseComponentInvocation() (ast.Node, error) {
 		props = append(props, ast.NamedArgNode{Key: name, Value: value, Line: openTk.Line})
 	}
 
-	// Use "src#CompName" so the engine can resolve named components
-	templateName := entry.src + "#" + entry.compName
+	// File-per-component: the import source IS the component template.
 	node := &ast.ComponentNode{
-		Name: templateName,
+		Name:  entry.src,
 		Props: props,
 		Line:  openTk.Line,
 	}
@@ -560,60 +452,6 @@ func (p *parser) parseComponentInvocation() (ast.Node, error) {
 	node.DefaultFill = defaultFill
 	node.Fills = fills
 	return node, nil
-}
-
-// ─── <Fill slot="name"> ─────────────────────────────────────────────────────
-
-func (p *parser) parseFillElement() (*ast.FillNode, error) {
-	openTk := p.advance() // consume TK_ELEMENT_OPEN("Fill")
-
-	var slotName string
-	var letBindings map[string]string
-	for {
-		name, value, selfClose, err := p.readAttr()
-		if err != nil {
-			return nil, err
-		}
-		if name == "" {
-			if selfClose {
-				return &ast.FillNode{Name: slotName, LetBindings: letBindings, Line: openTk.Line}, nil
-			}
-			break
-		}
-		if name == "slot" {
-			if s, ok := value.(*ast.StringLiteral); ok {
-				slotName = s.Value
-			}
-		} else if strings.HasPrefix(name, "let:") {
-			// let:data or let:data="alias"
-			scopeKey := name[4:] // after "let:"
-			localVar := scopeKey // default: same name
-			if value != nil {
-				if s, ok := value.(*ast.StringLiteral); ok {
-					localVar = s.Value
-				}
-			}
-			if letBindings == nil {
-				letBindings = make(map[string]string)
-			}
-			letBindings[scopeKey] = localVar
-		}
-	}
-
-	body, err := p.parseElementBody("Fill")
-	if err != nil {
-		return nil, err
-	}
-	if closeErr := p.expectElementClose("Fill"); closeErr != nil {
-		return nil, closeErr
-	}
-
-	return &ast.FillNode{
-		Name:        slotName,
-		Body:        body,
-		LetBindings: letBindings,
-		Line:        openTk.Line,
-	}, nil
 }
 
 // ─── {% if %} ─────────────────────────────────────────────────────────────────
@@ -1087,7 +925,6 @@ func infixPrec(k lexer.TokenKind) (int, bool) {
 	return 0, false
 }
 
-
 // ─── {% let %} ──────────────────────────────────────────────────────────────
 
 // captureUntilEndTag extracts raw text between the current position and {% tagName %}.
@@ -1350,16 +1187,13 @@ func (p *parser) parseCallArgs() (posArgs []ast.Node, namedArgs []ast.NamedArgNo
 	return posArgs, namedArgs, nil
 }
 
-
-
-
-
 // parseImport parses {% import Name from "path" %} and its variants:
-//   {% import Card from "components/cards" %}
-//   {% import Card as InfoCard from "components/cards" %}
-//   {% import Card, Badge from "components/ui" %}
-//   {% import * from "components/ui" %}
-//   {% import * as UI from "components/ui" %}
+//
+//	{% import Card from "components/cards" %}
+//	{% import Card as InfoCard from "components/cards" %}
+//	{% import Card, Badge from "components/ui" %}
+//	{% import * from "components/ui" %}
+//	{% import * as UI from "components/ui" %}
 func (p *parser) parseImport(tagStart lexer.Token) (ast.Node, error) {
 	p.advance() // consume "import"
 
@@ -1455,10 +1289,7 @@ func (p *parser) parseImport(tagStart lexer.Token) (ast.Node, error) {
 	return &ast.TextNode{Value: "", Line: tagStart.Line}, nil
 }
 
-
 // ─── Plan 6: Component + Slots parser methods ─────────────────────────────────
-
-
 
 // parseSlotInline parses self-closing slot tags: {% slot %} or {% slot "name" data={expr} %}
 func (p *parser) parseSlotInline(tagStart lexer.Token) (*ast.SlotNode, error) {
@@ -1570,9 +1401,6 @@ func (p *parser) parseFillTag(tagStart lexer.Token) (*ast.FillNode, error) {
 	}
 	return &ast.FillNode{Name: nameTok.Value, Body: body, LetBindings: letBindings, Line: tagStart.Line}, nil
 }
-
-
-
 
 // ─── Plan 7: Web primitives parser methods ────────────────────────────────────
 

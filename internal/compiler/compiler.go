@@ -3,7 +3,6 @@ package compiler
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/wispberry-tech/grove/internal/ast"
 )
@@ -21,8 +20,6 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 		Names:      c.names,
 		Macros:     c.macros,
 		Blocks:     c.blocks,
-		Extends:    c.extends,
-		Props:      c.props,
 		Components: c.components,
 		ImportMap:  prog.ImportMap,
 	}
@@ -44,85 +41,11 @@ type cmp struct {
 	nameIdx    map[string]int
 	macros     []MacroDef
 	blocks     []BlockDef
-	extends    string
-	props      []MacroParam
 	components []ComponentDef
 }
 
 func (c *cmp) compileProgram(prog *ast.Program) error {
-	// Check for extends — must be first node (ignoring leading whitespace/raw text and props)
-	extendsIdx := -1
-scanLoop:
-	for i, node := range prog.Body {
-		if _, ok := node.(*ast.ExtendsNode); ok {
-			extendsIdx = i
-			break
-		}
-		// TextNode and PropsNode are allowed before extends; anything else stops the scan
-		switch node.(type) {
-		case *ast.TextNode, *ast.PropsNode:
-			// continue scanning
-		default:
-			break scanLoop
-		}
-	}
-	if extendsIdx >= 0 {
-		return c.compileExtendsTemplate(prog, extendsIdx)
-	}
 	return c.compileBody(prog.Body)
-}
-
-func (c *cmp) compileExtendsTemplate(prog *ast.Program, extendsIdx int) error {
-	extendsNode := prog.Body[extendsIdx].(*ast.ExtendsNode)
-	c.extends = extendsNode.Name
-
-	// Validate: nothing output-producing before extends; allow PropsNode
-	for _, node := range prog.Body[:extendsIdx] {
-		switch n := node.(type) {
-		case *ast.TextNode:
-			if strings.TrimSpace(n.Value) != "" {
-				return fmt.Errorf("compiler: content before extends at line %d", extendsNode.Line)
-			}
-		case *ast.PropsNode:
-			// Props declaration is allowed before extends — compile it now
-			if err := c.compileNode(n); err != nil {
-				return err
-			}
-		default:
-			return fmt.Errorf("compiler: content before extends at line %d", extendsNode.Line)
-		}
-	}
-
-	// Compile only block definitions and imports from the remaining nodes
-	for _, node := range prog.Body[extendsIdx+1:] {
-		switch n := node.(type) {
-		case *ast.BlockNode:
-			if err := c.compileBlockDef(n); err != nil {
-				return err
-			}
-		case *ast.ImportNode:
-			if err := c.compileImport(n); err != nil {
-				return err
-			}
-		case *ast.TextNode:
-			// whitespace between blocks — ignore
-		default:
-			return fmt.Errorf("compiler: only block definitions allowed in extending template (line %d)", extendsNode.Line)
-		}
-	}
-
-	c.emit(OP_EXTENDS, uint16(c.addName(extendsNode.Name)), 0, 0)
-	return nil
-}
-
-func (c *cmp) compileBlockDef(n *ast.BlockNode) error {
-	sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
-	if err := sub.compileBody(n.Body); err != nil {
-		return err
-	}
-	sub.emit(OP_HALT, 0, 0, 0)
-	c.blocks = append(c.blocks, BlockDef{Name: n.Name, Body: subBytecode(sub)})
-	return nil
 }
 
 func (c *cmp) compileBody(nodes []ast.Node) error {
@@ -188,30 +111,8 @@ func (c *cmp) compileNode(node ast.Node) error {
 	case *ast.ImportNode:
 		return c.compileImport(n)
 
-	case *ast.BlockNode:
-		// Base template: compile default body into Blocks, emit OP_BLOCK_RENDER
-		if err := c.compileBlockDef(n); err != nil {
-			return err
-		}
-		blockIdx := len(c.blocks) - 1
-		c.emit(OP_BLOCK_RENDER, uint16(c.addName(n.Name)), uint16(blockIdx), 0)
-
-	case *ast.ExtendsNode:
-		// Should not reach here — handled by compileProgram
-		return fmt.Errorf("compiler: unexpected extends node in compileNode (should be handled by compileProgram)")
-
-	case *ast.PropsNode:
-		for _, p := range n.Params {
-			mp := MacroParam{Name: p.Name}
-			if p.Default != nil {
-				mp.Default = constValueOf(p.Default)
-			}
-			c.props = append(c.props, mp)
-		}
-		c.emit(OP_PROPS_INIT, 0, 0, 0)
-
 	case *ast.SlotNode:
-		// Push scope data onto stack for scoped slots (key, value pairs)
+		// Push scope data (key, value) pairs onto the stack for the fill let-bindings.
 		for _, sd := range n.ScopeData {
 			c.emitPushConst(sd.Key)
 			if err := c.compileExpr(sd.Value); err != nil {
@@ -219,19 +120,17 @@ func (c *cmp) compileNode(node ast.Node) error {
 			}
 		}
 		scopeCount := uint8(len(n.ScopeData))
-		if len(n.Default) == 0 {
-			c.emit(OP_SLOT, uint16(c.addName(n.Name)), 0xFFFF, scopeCount)
-		} else {
+		defaultIdx := uint16(0xFFFF) // sentinel: no default content
+		if len(n.Default) > 0 {
 			sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 			if err := sub.compileBody(n.Default); err != nil {
 				return err
 			}
 			sub.emit(OP_HALT, 0, 0, 0)
-			defaultBC := subBytecode(sub)
-			c.blocks = append(c.blocks, BlockDef{Name: "__slot__:" + n.Name, Body: defaultBC})
-			defaultIdx := len(c.blocks) - 1
-			c.emit(OP_SLOT, uint16(c.addName(n.Name)), uint16(defaultIdx), scopeCount)
+			c.blocks = append(c.blocks, BlockDef{Name: "__slot_default__:" + n.Name, Body: subBytecode(sub)})
+			defaultIdx = uint16(len(c.blocks) - 1)
 		}
+		c.emit(OP_SLOT, uint16(c.addName(n.Name)), defaultIdx, scopeCount)
 
 	case *ast.ComponentNode:
 		return c.compileComponent(n)
@@ -247,21 +146,6 @@ func (c *cmp) compileNode(node ast.Node) error {
 
 	case *ast.HoistNode:
 		return c.compileHoist(n)
-
-	case *ast.ComponentDefNode:
-		// Component definition: extract props and compile body
-		if len(n.Props) > 0 {
-			for _, p := range n.Props {
-				mp := MacroParam{Name: p.Name}
-				if p.Default != nil {
-					mp.Default = constValueOf(p.Default)
-				}
-				c.props = append(c.props, mp)
-			}
-			c.emit(OP_PROPS_INIT, 0, 0, 0)
-		}
-		// else: no props declared → permissive mode (Props stays nil)
-		return c.compileBody(n.Body)
 
 	default:
 		return fmt.Errorf("compiler: unknown node type %T", node)

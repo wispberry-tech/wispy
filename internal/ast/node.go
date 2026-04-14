@@ -255,10 +255,10 @@ func (*MacroCallExpr) wispyNode() {}
 
 // CallNode is {% call macro(args) %}body{% endcall %} — call with a caller body.
 type CallNode struct {
-	Callee    Node           // the macro being called (Identifier or AttributeAccess)
+	Callee    Node // the macro being called (Identifier or AttributeAccess)
 	PosArgs   []Node
 	NamedArgs []NamedArgNode
-	Body      []Node         // the caller() body
+	Body      []Node // the caller() body
 	Line      int
 }
 
@@ -291,37 +291,21 @@ type ImportNode struct {
 
 func (*ImportNode) wispyNode() {}
 
-// ExtendsNode is {% extends "name" %} — must be the first non-whitespace node.
-type ExtendsNode struct {
-	Name string
-	Line int
+// ComponentNode is a component invocation: <Btn label="Save">...</Btn>.
+// Name is the template path to load (no fragment — whole file is the component).
+type ComponentNode struct {
+	Name        string         // template path
+	Props       []NamedArgNode // key=value attributes passed as props
+	DefaultFill []Node         // body content outside any {% #fill %} block
+	Fills       []FillNode     // named fills
+	Line        int
 }
 
-func (*ExtendsNode) wispyNode() {}
+func (*ComponentNode) wispyNode() {}
 
-// BlockNode is {% block name %}...{% endblock %}.
-// In an extending template, Block nodes define overrides.
-// In a base template, Block nodes define named slots with default content.
-type BlockNode struct {
-	Name string
-	Body []Node
-	Line int
-}
-
-func (*BlockNode) wispyNode() {}
-
-// PropsNode is {% props name, name2="default", ... %} — declares accepted props.
-// Must appear at the top of a component template. Reuses MacroParam for params.
-type PropsNode struct {
-	Params []MacroParam
-	Line   int
-}
-
-func (*PropsNode) wispyNode() {}
-
-// FillNode is {% fill "name" %}...{% endfill %} inside a component call body.
-// FillNode is NOT directly part of the template AST — it is consumed by the parser
-// when parsing a ComponentNode and stored in ComponentNode.Fills.
+// FillNode is {% #fill "name" %}...{% /fill %} inside a component call body.
+// Consumed by the parser and stored in ComponentNode.Fills. Still implements
+// Node so it can also appear as a standalone body element during parsing.
 type FillNode struct {
 	Name        string
 	Body        []Node
@@ -329,16 +313,7 @@ type FillNode struct {
 	Line        int
 }
 
-// ComponentNode is {% component "name" k=v, ... %}...{% endcomponent %}.
-type ComponentNode struct {
-	Name        string         // template name (string literal)
-	Props       []NamedArgNode // passed props (key=value pairs)
-	DefaultFill []Node         // body content outside fill blocks → fed to {% slot %}
-	Fills       []FillNode     // named {% fill %}...{% endfill %} blocks
-	Line        int
-}
-
-func (*ComponentNode) wispyNode() {}
+func (*FillNode) wispyNode() {}
 
 // SlotNode is <Slot name="x" data={expr} /> inside a component template.
 type SlotNode struct {
@@ -349,6 +324,8 @@ type SlotNode struct {
 }
 
 func (*SlotNode) wispyNode() {}
+
+// ─── Literal collection nodes ─────────────────────────────────
 
 // ─── Literal collection nodes ─────────────────────────────────────────────────
 
@@ -446,14 +423,3 @@ type HoistNode struct {
 }
 
 func (*HoistNode) wispyNode() {}
-
-// ComponentDefNode represents a <Component name="X" ...>body</Component> definition.
-// Used in the HTML-centric syntax to define components within a file.
-type ComponentDefNode struct {
-	Name  string       // component name (e.g., "Btn")
-	Props []MacroParam // declared props
-	Body  []Node       // component body
-	Line  int
-}
-
-func (*ComponentDefNode) wispyNode() {}
