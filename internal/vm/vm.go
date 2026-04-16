@@ -14,9 +14,11 @@ import (
 )
 
 // PrecompileConsts converts the untyped constant pool in a Bytecode to a
-// pre-compiled []Value slice stored on the Bytecode itself. This should be
-// called once after compilation (e.g. in engine.compileChecked). Subsequent
-// calls are no-ops if CompiledConsts is already set.
+// pre-compiled []Value slice stored on the Bytecode itself, and recurses into
+// every reachable sub-bytecode (macros, blocks, component fills). Called once
+// after compilation from engine.compileChecked, before the Bytecode is cached
+// or read by any VM. This avoids lazy initialization, which previously raced
+// on concurrent first-renders of the same template.
 func PrecompileConsts(bc *compiler.Bytecode) {
 	if bc.CompiledConsts != nil {
 		return
@@ -26,15 +28,29 @@ func PrecompileConsts(bc *compiler.Bytecode) {
 		vals[i] = fromConst(c)
 	}
 	bc.CompiledConsts = vals
+	for i := range bc.Macros {
+		if bc.Macros[i].Body != nil {
+			PrecompileConsts(bc.Macros[i].Body)
+		}
+	}
+	for i := range bc.Blocks {
+		if bc.Blocks[i].Body != nil {
+			PrecompileConsts(bc.Blocks[i].Body)
+		}
+	}
+	for i := range bc.Components {
+		for j := range bc.Components[i].Fills {
+			if bc.Components[i].Fills[j].Body != nil {
+				PrecompileConsts(bc.Components[i].Fills[j].Body)
+			}
+		}
+	}
 }
 
-// getCompiledConsts retrieves the pre-compiled constants from a Bytecode,
-// compiling them on the fly if not yet set (e.g. for sub-templates loaded at runtime).
+// getCompiledConsts retrieves the pre-compiled constants from a Bytecode.
+// PrecompileConsts is called eagerly on every reachable bytecode at compile
+// time, so this is a pure read — no concurrent mutation.
 func getCompiledConsts(bc *compiler.Bytecode) []Value {
-	if bc.CompiledConsts != nil {
-		return bc.CompiledConsts.([]Value)
-	}
-	PrecompileConsts(bc)
 	return bc.CompiledConsts.([]Value)
 }
 
@@ -445,6 +461,15 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 			}
 			if v.ldepth >= len(v.loops) {
 				return &runtimeErr{msg: "for loop nesting too deep (max 32)"}
+			}
+			// Sandbox: count the first iteration. Subsequent iterations are
+			// counted in OP_FOR_STEP, so MaxLoopIter=N allows exactly N body
+			// executions across this and any nested loops.
+			if v.rc != nil && v.rc.maxLoopIter > 0 {
+				v.rc.loopIter++
+				if v.rc.loopIter > v.rc.maxLoopIter {
+					return &runtimeErr{msg: fmt.Sprintf("sandbox: loop iteration limit %d exceeded", v.rc.maxLoopIter)}
+				}
 			}
 			v.loops[v.ldepth] = ls
 			v.ldepth++
