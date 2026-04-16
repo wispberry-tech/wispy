@@ -523,8 +523,8 @@ The core execution loop is a `for` loop with a `switch` on `instr.Op`. Key behav
 
 - **Output** (`OP_OUTPUT`): pops value, HTML-escapes unless `IsSafeHTML()`, writes to current output buffer (or capture buffer if in capture mode)
 - **Scope lookup** (`OP_LOAD`): looks up variable by name through scope chain
-- **Constant cache**: bytecode constant pools are pre-compiled to `[]Value` via `sync.Map` keyed by `*Bytecode` pointer — subsequent executions skip the type-switch conversion
-- **Loop iteration**: `OP_FOR_INIT` initializes loop state; `OP_FOR_STEP` advances; sandbox `MaxLoopIter` is checked at each step
+- **Constant cache**: bytecode constant pools are pre-compiled to `[]Value` eagerly in `engine.compileChecked` and stored on the `Bytecode` itself, recursing into every reachable sub-bytecode (macros, blocks, component fills). Because the write happens once, single-threaded, before the bytecode is cached, subsequent concurrent reads are race-free
+- **Loop iteration**: `OP_FOR_INIT` initializes loop state (counting the first body execution); `OP_FOR_STEP` advances (counting each subsequent body execution); sandbox `MaxLoopIter` is incremented and checked at both sites, so the counter equals total body executions across all nested loops
 - **Block rendering**: `OP_BLOCK_RENDER` checks `blockSlots` for override chain; executes override or default
 - **Super chains**: `OP_SUPER` advances one level up the block chain; `RuntimeError` if called outside a block
 
@@ -1255,7 +1255,7 @@ eng := grove.New(grove.WithSandbox(grove.SandboxConfig{
 ### Enforcement Tiers
 
 1. **Compile-time**: `AllowedTags` checked by the parser; `AllowedFilters` checked after compilation by walking bytecode instructions. Banned tags/filters produce `ParseError` before any execution.
-2. **Runtime**: `MaxLoopIter` checked at each `OP_FOR_STEP`; running counter tracks iterations across all loops in a render pass. Exceeding the limit produces `RuntimeError`.
+2. **Runtime**: `MaxLoopIter` incremented and checked at `OP_FOR_INIT` (first iteration) and `OP_FOR_STEP` (each subsequent iteration); the running counter equals total body executions across all loops (including nested) in a render pass. Exceeding the limit produces `RuntimeError`.
 
 ### Path Traversal Prevention
 

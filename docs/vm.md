@@ -126,7 +126,7 @@ eng := grove.New(
 |------|-------|-------|-----------|
 | `AllowedTags` | Parser | `ParseError` | Parser rejects any `{% tag %}` not in the list before the AST is built. |
 | `AllowedFilters` | Post-compile | `ParseError` | After compile, the engine walks the bytecode (including macros, blocks, and component fills) and rejects any `OP_FILTER` referencing a filter not in the list. Caching only happens on pass. |
-| `MaxLoopIter` | VM runtime | `RuntimeError` | VM counts loop iterations across all loops in a render pass. Nested loops share the budget; `0` means unlimited. |
+| `MaxLoopIter` | VM runtime | `RuntimeError` | VM counts body executions across all loops in a render pass (each iteration of every nested loop counts once). `MaxLoopIter=N` permits exactly N body executions; `0` means unlimited. |
 
 `nil` for either list means "allow all". The three knobs compose — you can use any subset.
 

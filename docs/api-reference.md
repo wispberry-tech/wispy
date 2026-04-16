@@ -99,7 +99,7 @@ type SandboxConfig struct {
 
 - `AllowedTags`: when set, only listed tag names are permitted (e.g., "if", "each", "set", "import"). Others cause a `ParseError` at compile time.
 - `AllowedFilters`: when set, only listed filters are permitted. Others cause a `ParseError` at compile time.
-- `MaxLoopIter`: maximum total loop iterations across all loops in a single render. Exceeding this causes a `RuntimeError`.
+- `MaxLoopIter`: maximum total loop body executions across all loops in a single render. Each iteration of any loop — including nested loops — counts as one. Exceeding this causes a `RuntimeError`.
 
 ```go
 eng := grove.New(grove.WithSandbox(grove.SandboxConfig{

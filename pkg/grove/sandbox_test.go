@@ -111,37 +111,39 @@ func TestSandbox_MaxLoopIter_ZeroIsUnlimited(t *testing.T) {
 	require.Equal(t, 100, len(result))
 }
 
-// Tier 4 #9: MaxLoopIter boundary. The counter increments on OP_FOR_STEP
-// (internal/vm/vm.go:477) — the loop-continue jump — so `MaxLoopIter: N`
-// actually permits N+1 body executions before erroring. This test pins that
-// behaviour so a future refactor of the check site can't silently drift.
+// Tier 4 #9: MaxLoopIter boundary. Counter increments on OP_FOR_INIT (first
+// iteration) and OP_FOR_STEP (each subsequent continuation), so the counter
+// equals the number of body executions. MaxLoopIter=N allows exactly N body
+// executions across all loops in a render.
 func TestSandbox_MaxLoopIter_Boundary(t *testing.T) {
-	// Limit 5, 6 body executions (5 continuations): allowed.
+	// Limit 5, 5 body executions: allowed.
 	eng := newEngine(t, grove.WithSandbox(grove.SandboxConfig{MaxLoopIter: 5}))
-	result := render(t, eng, `{% #each range(1, 7) as i %}{% i %},{% /each %}`, grove.Data{})
-	require.Equal(t, "1,2,3,4,5,6,", result)
+	result := render(t, eng, `{% #each range(1, 6) as i %}{% i %},{% /each %}`, grove.Data{})
+	require.Equal(t, "1,2,3,4,5,", result)
 
-	// Limit 5, 7 body executions (6 continuations): one over → RuntimeError.
+	// Limit 5, 6 body executions: one over → RuntimeError.
 	eng2 := newEngine(t, grove.WithSandbox(grove.SandboxConfig{MaxLoopIter: 5}))
-	err := renderErr(t, eng2, `{% #each range(1, 8) as i %}{% i %},{% /each %}`, grove.Data{})
+	err := renderErr(t, eng2, `{% #each range(1, 7) as i %}{% i %},{% /each %}`, grove.Data{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "5")
 }
 
-// TestSandbox_MaxLoopIter_NestedLoops verifies that MaxLoopIter counts iterations across nested loops.
+// TestSandbox_MaxLoopIter_NestedLoops verifies that MaxLoopIter counts body
+// executions across every loop level. Outer body running an inner loop
+// contributes both its own execution and each of its inner iterations.
 func TestSandbox_MaxLoopIter_NestedLoops(t *testing.T) {
+	// Outer 3 × Inner 3 = 3 outer bodies + 9 inner bodies = 12 total.
 	eng := newEngine(t, grove.WithSandbox(grove.SandboxConfig{
-		MaxLoopIter: 9,
+		MaxLoopIter: 12,
 	}))
-	// Outer loop 3 times, inner loop 3 times = 9 total iterations (allowed)
 	result := render(t, eng, `{% #each range(1, 4) as i %}{% #each range(1, 4) as j %}x{% /each %}{% /each %}`, grove.Data{})
 	require.Equal(t, 9, len(result))
 
-	// Outer loop 4 times, inner loop 3 times = 12 total iterations (exceeds limit of 10)
+	// One less than the needed budget → error.
 	eng2 := newEngine(t, grove.WithSandbox(grove.SandboxConfig{
-		MaxLoopIter: 10,
+		MaxLoopIter: 11,
 	}))
-	err := renderErr(t, eng2, `{% #each range(1, 5) as i %}{% #each range(1, 4) as j %}x{% /each %}{% /each %}`, grove.Data{})
+	err := renderErr(t, eng2, `{% #each range(1, 4) as i %}{% #each range(1, 4) as j %}x{% /each %}{% /each %}`, grove.Data{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "loop")
 }
