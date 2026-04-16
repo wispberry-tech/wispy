@@ -281,3 +281,26 @@ func TestComponent_EmptyBody(t *testing.T) {
 	store.Set("page.html", `{% import Card from "card" %}<Card />`)
 	require.Equal(t, "<div></div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
+
+// Regression: when a fill body invokes a nested component that itself uses
+// {% #slot %}, the nested OP_COMPONENT pushed a frame at the same stack index
+// that OP_SLOT had temporarily vacated via `csdepth--`. That overwrote the
+// outer component's frame, so any subsequent slot lookup on the outer
+// component found no fills and rendered empty. See internal/vm/vm.go OP_SLOT.
+func TestComponent_FillWithNestedSlotDoesNotClobberOuterFrame(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Outer: two slots, rendered in order.
+	store.Set("outer.html", `[{% #slot "a" %}{% /slot %}|{% #slot "b" %}{% /slot %}]`)
+	// Inner uses its own {% #slot %} — this triggered the frame overwrite.
+	store.Set("inner.html", `<i>{% #slot %}{% /slot %}</i>`)
+	store.Set("page.html",
+		`{% import Outer from "outer" %}{% import Inner from "inner" %}`+
+			`<Outer>`+
+			`{% #fill "a" %}<Inner>A</Inner>{% /fill %}`+
+			`{% #fill "b" %}B{% /fill %}`+
+			`</Outer>`)
+	// Pre-fix output was `[<i>A</i>|]` — the "b" fill was dropped because
+	// the Inner OP_COMPONENT clobbered Outer's frame before OP_SLOT for "b"
+	// could look up the "b" fill.
+	require.Equal(t, `[<i>A</i>|B]`, renderComponent(t, store, "page.html", grove.Data{}))
+}

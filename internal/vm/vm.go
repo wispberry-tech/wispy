@@ -921,8 +921,14 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 
 			if matchedFill != nil && matchedFill.Body != nil {
 				// Render fill in caller scope (lazy render).
+				// csdepth is decremented so slots nested inside the fill body
+				// resolve against the caller's frame. If the fill body invokes
+				// another component, OP_COMPONENT would push a frame at the
+				// decremented index and clobber this frame — save it and
+				// restore after the fill body runs.
 				savedSC := v.sc
 				savedDepth := v.csdepth
+				savedFrame := v.compStack[savedDepth-1]
 				v.sc = scope.New(frame.callerScope)
 				v.csdepth--
 
@@ -938,6 +944,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 				err := v.run(ctx, matchedFill.Body)
 				v.sc = savedSC
 				v.csdepth = savedDepth
+				v.compStack[savedDepth-1] = savedFrame
 				if err != nil {
 					return err
 				}
