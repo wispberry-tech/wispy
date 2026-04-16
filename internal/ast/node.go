@@ -264,24 +264,6 @@ type CallNode struct {
 
 func (*CallNode) wispyNode() {}
 
-// IncludeNode is {% include "name" [k=v ...] %}.
-type IncludeNode struct {
-	Name     string         // template name (string literal)
-	WithVars []NamedArgNode // extra variables (empty = no with clause)
-	Line     int
-}
-
-func (*IncludeNode) wispyNode() {}
-
-// RenderNode is {% render "name" [with k=v, ...] %} — always isolated.
-type RenderNode struct {
-	Name     string
-	WithVars []NamedArgNode
-	Line     int
-}
-
-func (*RenderNode) wispyNode() {}
-
 // ImportNode is {% import "name" as alias %}.
 type ImportNode struct {
 	Name  string // template name

@@ -159,56 +159,6 @@ func (v *VM) currentWriter() *bytes.Buffer {
 	return &v.out
 }
 
-// execSubTemplate handles both OP_INCLUDE and OP_RENDER.
-// isolated=false: include (shares caller scope); isolated=true: render (fresh scope from globals).
-func (v *VM) execSubTemplate(ctx context.Context, tmplName string, pairCount int, isolated bool) error {
-	withVars := make(map[string]any, pairCount)
-	for i := pairCount - 1; i >= 0; i-- {
-		val := v.pop()
-		key := v.pop()
-		withVars[key.String()] = val
-	}
-
-	subBC, err := v.eng.LoadTemplate(tmplName)
-	if err != nil {
-		directive := "include"
-		if isolated {
-			directive = "render"
-		}
-		return &runtimeErr{msg: fmt.Sprintf("%s %q: %v", directive, tmplName, err)}
-	}
-
-	savedSC := v.sc
-	if isolated {
-		renderSc := v.newScopeFromGlobal()
-		for k, raw := range withVars {
-			typedVal, ok := raw.(Value)
-			if !ok {
-				return &runtimeErr{msg: fmt.Sprintf("render %q: internal: expected Value for %q, got %T", tmplName, k, raw)}
-			}
-			renderSc.Set(k, typedVal)
-		}
-		v.sc = renderSc
-	} else if len(withVars) > 0 {
-		v.sc = scope.New(v.sc)
-		for k, raw := range withVars {
-			typedVal, ok := raw.(Value)
-			if !ok {
-				v.sc = savedSC
-				return &runtimeErr{msg: fmt.Sprintf("include %q: internal: expected Value for %q, got %T", tmplName, k, raw)}
-			}
-			v.sc.Set(k, typedVal)
-		}
-	}
-
-	if err := v.run(ctx, subBC); err != nil {
-		v.sc = savedSC
-		return err
-	}
-	v.sc = savedSC
-	return nil
-}
-
 // Execute runs bc with data as the render context and returns an ExecuteResult.
 // templateName is used for error context; pass "" for inline templates.
 func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, eng EngineIface, templateName string) (ExecuteResult, error) {
@@ -645,15 +595,6 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) error {
 				return err
 			}
 			v.push(SafeHTMLVal(result))
-
-		case compiler.OP_INCLUDE, compiler.OP_RENDER:
-			tmplName := bc.Names[instr.A]
-			pairCount := int(instr.B)
-			isolated := instr.Op == compiler.OP_RENDER
-
-			if err := v.execSubTemplate(ctx, tmplName, pairCount, isolated); err != nil {
-				return err
-			}
 
 		case compiler.OP_IMPORT:
 			tmplName := bc.Names[instr.A]

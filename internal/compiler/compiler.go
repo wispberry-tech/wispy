@@ -102,12 +102,6 @@ func (c *cmp) compileNode(node ast.Node) error {
 	case *ast.CallNode:
 		return c.compileCallNode(n)
 
-	case *ast.IncludeNode:
-		return c.compileInclude(n)
-
-	case *ast.RenderNode:
-		return c.compileRender(n)
-
 	case *ast.ImportNode:
 		return c.compileImport(n)
 
@@ -510,30 +504,6 @@ func (c *cmp) compileCallNode(n *ast.CallNode) error {
 	}
 	// {% call %} is a statement — emit OP_OUTPUT to write result to output buffer
 	c.emit(OP_OUTPUT, 0, 0, 0)
-	return nil
-}
-
-// compileInclude compiles {% include "name" [k=v ...] %}.
-func (c *cmp) compileInclude(n *ast.IncludeNode) error {
-	for _, kv := range n.WithVars {
-		c.emitPushConst(kv.Key)
-		if err := c.compileExpr(kv.Value); err != nil {
-			return err
-		}
-	}
-	c.emit(OP_INCLUDE, uint16(c.addName(n.Name)), uint16(len(n.WithVars)), 0)
-	return nil
-}
-
-// compileRender compiles {% render "name" [with k=v] %}.
-func (c *cmp) compileRender(n *ast.RenderNode) error {
-	for _, kv := range n.WithVars {
-		c.emitPushConst(kv.Key)
-		if err := c.compileExpr(kv.Value); err != nil {
-			return err
-		}
-	}
-	c.emit(OP_RENDER, uint16(c.addName(n.Name)), uint16(len(n.WithVars)), 0)
 	return nil
 }
 

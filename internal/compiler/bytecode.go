@@ -59,8 +59,6 @@ const (
 	OP_CALL_MACRO_VAL  // A=posArgCount Flags=namedArgCount; pop namedArgs*2, posArgs, macroVal; push SafeHTML result
 	OP_CALL_MACRO_CALL // like OP_CALL_MACRO_VAL but also pops caller body (MacroVal) beneath macro
 	OP_CALL_CALLER     // call the __caller__ macro in current scope; push SafeHTML result
-	OP_INCLUDE         // A=name_idx Flags: bit0=isolated; B=with_pair_count
-	OP_RENDER          // A=name_idx B=with_pair_count; always isolated
 	OP_IMPORT          // A=name_idx B=alias_idx
 
 	// ─── Plan 5 opcodes ────────────────────────────────────────────────────────
