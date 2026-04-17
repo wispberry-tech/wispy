@@ -1,6 +1,6 @@
 {# CopyButton — required: value. Renders the value as <code> with a copy icon on the right. #}
 {% asset "components/copy-button/copy-button.css" type="stylesheet" %}
-{% asset "components/copy-button/copy-button.js" type="script" defer %}
+{% asset "components/copy-button/copy-button.js" type="module" %}
 <div class="copy-button" data-copy-value="{% value %}">
   <code class="copy-button__value">{% value %}</code>
   <button type="button" class="copy-button__btn" aria-label="Copy to clipboard">

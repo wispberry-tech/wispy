@@ -43,12 +43,20 @@ func (r RenderResult) HeadHTML() string {
 	return sb.String()
 }
 
-// FootHTML returns <script> tags for all Type=="script" assets,
-// sorted by descending Priority within the group.
+// FootHTML returns <script> tags for all Type=="script" and Type=="module"
+// assets, sorted by descending Priority within each group. Classic scripts
+// are emitted first, then module scripts.
 func (r RenderResult) FootHTML() string {
 	var sb strings.Builder
 	for _, a := range sortedAssets(r.Assets, "script") {
 		sb.WriteString(`<script src="`)
+		sb.WriteString(a.Src)
+		sb.WriteByte('"')
+		sb.WriteString(formatAttrs(a.Attrs))
+		sb.WriteString("></script>\n")
+	}
+	for _, a := range sortedAssets(r.Assets, "module") {
+		sb.WriteString(`<script type="module" src="`)
 		sb.WriteString(a.Src)
 		sb.WriteByte('"')
 		sb.WriteString(formatAttrs(a.Attrs))

@@ -187,6 +187,48 @@ func TestAsset_FootHTML(t *testing.T) {
 	}
 }
 
+func TestAsset_ModuleFootHTML(t *testing.T) {
+	eng := newStoreEng(map[string]string{
+		"page.html": `{% asset "app/main.js" type="module" %}{% asset "vendor.js" type="script" %}`,
+	})
+	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	foot := result.FootHTML()
+	if !strings.Contains(foot, `<script type="module" src="app/main.js">`) {
+		t.Errorf("FootHTML() missing module script, got %q", foot)
+	}
+	if !strings.Contains(foot, `<script src="vendor.js">`) {
+		t.Errorf("FootHTML() missing classic script, got %q", foot)
+	}
+	// Classic scripts must come before module scripts.
+	if strings.Index(foot, `type="module"`) < strings.Index(foot, `src="vendor.js"`) {
+		t.Errorf("classic scripts should precede module scripts, got %q", foot)
+	}
+}
+
+func TestAsset_ModuleResolvedThroughManifest(t *testing.T) {
+	eng := newStoreEng(map[string]string{
+		"page.html": `{% asset "app/main.js" type="module" %}`,
+	})
+	eng.SetAssetResolver(func(logical string) (string, bool) {
+		if logical == "app/main.js" {
+			return "/static/app/main.abc12345.js", true
+		}
+		return "", false
+	})
+	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	foot := result.FootHTML()
+	want := `<script type="module" src="/static/app/main.abc12345.js"></script>`
+	if !strings.Contains(foot, want) {
+		t.Errorf("FootHTML() = %q, want substring %q", foot, want)
+	}
+}
+
 func TestAsset_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"button.html": `{% asset "button.css" type="stylesheet" %}<button>click</button>`,

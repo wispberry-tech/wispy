@@ -16,6 +16,7 @@
   <title>{% #slot "title" %}Grove — A template engine for Go{% /slot %}</title>
   <!-- HEAD_META -->
   <!-- HEAD_ASSETS -->
+  <!-- HEAD_IMPORTMAP -->
   <!-- HEAD_HOIST -->
 </head>
 <body>

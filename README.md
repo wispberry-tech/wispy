@@ -188,6 +188,25 @@ same tag passes through unchanged — the pipeline is fully opt-in and adds
 no overhead when absent. See [Asset Pipeline](docs/asset-pipeline.md) for
 watch mode, pruning, custom transformers, and the HTTP handler API.
 
+### ES Modules (optional)
+
+Declare a module script with `{% asset "app/main.js" type="module" %}` —
+`RenderResult.FootHTML()` emits `<script type="module" src="...">`. Pair
+it with the opt-in `pkg/grove/assets/esm` subpackage to build a browser
+importmap from the manifest so bare specifiers survive fingerprinting:
+
+```go
+import "github.com/wispberry-tech/grove/pkg/grove/assets/esm"
+
+importmap := esm.Importmap(manifest, esm.Options{StripJSExt: true})
+// inject into <head>, then `import x from "app/util"` inside your module
+// resolves to the hashed URL without a bundler.
+```
+
+No JS parsing, no dep graph — just classic importmap semantics. Details
+and limits (notably: relative imports in hashed files don't resolve via
+importmap): [`docs/spec/esm-support.md`](docs/spec/esm-support.md).
+
 ### Typical Web App
 
 A complete HTTP handler assembles the response from `RenderResult`:

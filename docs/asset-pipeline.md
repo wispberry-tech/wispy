@@ -235,6 +235,56 @@ out, err := t.Transform(src, "text/css")
 Unknown media types return an explicit error rather than passing through
 silently, so misconfigured pipelines fail loudly.
 
+## ESM modules
+
+The pipeline supports loading fingerprinted JavaScript as ES modules via
+a browser-native importmap. No bundling; no JS parsing. Two pieces:
+
+1. **`{% asset "app.js" type="module" %}`** — `FootHTML()` emits
+   `<script type="module" src="...">` for assets whose `type` is
+   `"module"`. Classic `"script"` assets are emitted first, modules
+   after.
+2. **`pkg/grove/assets/esm`** (opt-in subpackage) — `esm.Importmap(manifest, opts)`
+   builds a `<script type="importmap">` block from the manifest's JS
+   entries. Inject the returned string as global template data and emit
+   via the `safe` filter.
+
+```go
+import "github.com/wispberry-tech/grove/pkg/grove/assets/esm"
+
+importmap := esm.Importmap(manifest, esm.Options{
+    StripJSExt: true, // also emit "foo/bar" alongside "foo/bar.js"
+    Extra: map[string]string{
+        "htmx.org": "https://esm.sh/htmx.org@2.0.0",
+    },
+})
+
+eng := grove.New(
+    grove.WithAssetResolver(manifest.Resolve),
+    grove.WithGlobalData(map[string]any{"importmap": importmap}),
+)
+```
+
+```grov
+<head>
+  {{ importmap | safe }}
+</head>
+<body>
+  {% slot %}
+  {% asset "app/main.js" type="module" %}
+</body>
+```
+
+**Important limit:** the importmap resolves **bare specifiers**
+(`import x from "app/util"`) to hashed URLs. It does NOT resolve
+**relative imports** (`import x from "./util.js"`) inside fingerprinted
+files — the browser resolves relative specifiers against the current
+module's URL before consulting the importmap, so the hashed sibling is
+never found. Author modules using bare specifiers keyed on logical
+names.
+
+Full rationale, examples, and future work: [`spec/esm-support.md`](spec/esm-support.md).
+
 ## Non-goals
 
 The pipeline is intentionally small. **Not included** (may be future

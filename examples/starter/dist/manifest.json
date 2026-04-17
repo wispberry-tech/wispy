@@ -1,8 +1,9 @@
 {
   "assets": {
     "components/button/button.css": "/dist/components/button/button.572ce452.css",
+    "components/copy-button/clipboard.js": "/dist/components/copy-button/clipboard.a69a1d70.js",
     "components/copy-button/copy-button.css": "/dist/components/copy-button/copy-button.259ee396.css",
-    "components/copy-button/copy-button.js": "/dist/components/copy-button/copy-button.451323dd.js",
+    "components/copy-button/copy-button.js": "/dist/components/copy-button/copy-button.603b184e.js",
     "components/feature-card/feature-card.css": "/dist/components/feature-card/feature-card.ade20998.css",
     "components/footer/footer.css": "/dist/components/footer/footer.353241d5.css",
     "components/hero/hero.css": "/dist/components/hero/hero.46e87b5d.css",

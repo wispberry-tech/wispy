@@ -25,6 +25,7 @@ import (
 
 	grove "github.com/wispberry-tech/grove/pkg/grove"
 	"github.com/wispberry-tech/grove/pkg/grove/assets"
+	"github.com/wispberry-tech/grove/pkg/grove/assets/esm"
 	"github.com/wispberry-tech/grove/pkg/grove/assets/minify"
 )
 
@@ -171,10 +172,16 @@ func renderPage(w http.ResponseWriter, r *http.Request, eng *grove.Engine, name 
 	writeResult(w, result)
 }
 
+// importmapHTML is the `<script type="importmap">...</script>` block built
+// once at startup from the asset manifest. writeResult injects it into the
+// <head> so module scripts can use bare specifiers across fingerprinted files.
+var importmapHTML string
+
 func writeResult(w http.ResponseWriter, result grove.RenderResult) {
 	body := result.Body
 
 	body = strings.Replace(body, "<!-- HEAD_ASSETS -->", result.HeadHTML(), 1)
+	body = strings.Replace(body, "<!-- HEAD_IMPORTMAP -->", importmapHTML, 1)
 	body = strings.Replace(body, "<!-- FOOT_ASSETS -->", result.FootHTML(), 1)
 	body = strings.Replace(body, "<!-- HEAD_META -->", renderMeta(result.Meta), 1)
 	body = strings.Replace(body, "<!-- HEAD_HOIST -->", result.GetHoisted("head"), 1)
@@ -205,7 +212,7 @@ func renderMeta(meta map[string]string) string {
 
 // ─── Engine setup ───────────────────────────────────────────────────────────
 
-func buildEngine(baseDir string) (*grove.Engine, *assets.Builder, error) {
+func buildEngine(baseDir string) (*grove.Engine, *assets.Builder, string, error) {
 	templateDir := filepath.Join(baseDir, "templates")
 	distDir := filepath.Join(baseDir, "dist")
 
@@ -220,8 +227,13 @@ func buildEngine(baseDir string) (*grove.Engine, *assets.Builder, error) {
 
 	manifest, err := builder.Build()
 	if err != nil {
-		return nil, nil, fmt.Errorf("asset build: %w", err)
+		return nil, nil, "", fmt.Errorf("asset build: %w", err)
 	}
+
+	// Build a browser importmap from the manifest so module scripts can use
+	// bare specifiers (e.g. `import { copyText } from "components/.../clipboard"`)
+	// and still resolve to fingerprinted URLs. See docs/spec/esm-support.md.
+	importmap := esm.Importmap(manifest, esm.Options{StripJSExt: true})
 
 	eng := grove.New(
 		grove.WithStore(grove.NewFileSystemStore(templateDir)),
@@ -251,7 +263,7 @@ func buildEngine(baseDir string) (*grove.Engine, *assets.Builder, error) {
 		return grove.StringValue(strings.Join(words[:limit], " ") + "…"), nil
 	}))
 
-	return eng, builder, nil
+	return eng, builder, importmap, nil
 }
 
 // ─── Wire-up ────────────────────────────────────────────────────────────────
@@ -297,10 +309,11 @@ func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
 	baseDir := filepath.Dir(thisFile)
 
-	eng, builder, err := buildEngine(baseDir)
+	eng, builder, imap, err := buildEngine(baseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
+	importmapHTML = imap
 
 	h := routes(eng, builder, filepath.Join(baseDir, "static"))
 
